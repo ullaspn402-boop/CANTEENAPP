@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "expo": "~52.0.0",
+    "expo-asset": "~10.0.10",
     "expo-auth-session": "~5.5.2",
     "expo-crypto": "~13.0.2",
     "expo-web-browser": "~13.0.3",
