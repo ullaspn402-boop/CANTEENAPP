@@ -44,6 +44,12 @@ jobs:
         run: npm install -g eas-cli
 
       # Build standalone APK. Ensure the CANTEEN_API_URL secret is set in GitHub Repository Secrets.
+      - name: Setup Kotlin 1.9.25
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Build Standalone APK
         env:
           EXPO_PUBLIC_API_BASE_URL: ${{ secrets.CANTEEN_API_URL }}
@@ -51,9 +57,12 @@ jobs:
           cd mobile
           echo "EXPO_PUBLIC_API_BASE_URL=${{ secrets.CANTEEN_API_URL }}" > .env
           npx expo prebuild --platform android --clean
+          # Fix Kotlin/Compose version mismatch — suppress compatibility check
+          echo "kotlin.version=1.9.25" >> android/gradle.properties
+          echo "android.suppressKotlinVersionCompatibilityCheck=1.9.25" >> android/gradle.properties
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease -Pkotlin.version=1.9.25
           cp app/build/outputs/apk/release/app-release-unsigned.apk ../../Smart-Canteen.apk || cp app/build/outputs/apk/release/*.apk ../../Smart-Canteen.apk
 
       - name: Upload APK Artifact
