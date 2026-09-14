@@ -1,0 +1,6 @@
+{
+  "name": "Smart College Canteen",
+  "description": "Smart College Canteen Management & Food Ordering Platform for students, canteen staff, and administrators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

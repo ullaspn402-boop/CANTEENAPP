@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Smart Canteen",
+    "slug": "smart-canteen",
+    "scheme": "com.smartcanteen.app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ea580c",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.smartcanteen.app"
+    },
+    "android": {
+      "package": "com.smartcanteen.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#ea580c"
+      },
+      "permissions": [
+        "INTERNET"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "smart-canteen-app"
+      }
+    }
+  }
+}

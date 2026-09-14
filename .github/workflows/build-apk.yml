@@ -1,0 +1,86 @@
+name: Build and Release Smart Canteen APK
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on release tags like v1.0.0, v1.1.0
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-android:
+    name: Build Smart Canteen APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Mobile Dependencies
+        run: |
+          cd mobile
+          npm install
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      # Build standalone APK. Ensure the CANTEEN_API_URL secret is set in GitHub Repository Secrets.
+      - name: Build Standalone APK
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.CANTEEN_API_URL }}
+        run: |
+          cd mobile
+          echo "EXPO_PUBLIC_API_BASE_URL=${{ secrets.CANTEEN_API_URL }}" > .env
+          npx expo prebuild --platform android --clean
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          cp app/build/outputs/apk/release/app-release-unsigned.apk ../../Smart-Canteen.apk || cp app/build/outputs/apk/release/*.apk ../../Smart-Canteen.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smart-Canteen-APK
+          path: Smart-Canteen.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        with:
+          name: Smart Canteen ${{ github.ref_name || github.event.inputs.version }}
+          tag_name: ${{ github.ref_name || github.event.inputs.version }}
+          files: Smart-Canteen.apk
+          draft: false
+          prerelease: false
+          body: |
+            ## 📱 Smart College Canteen Android Release
+            
+            This release contains the standalone installable APK (`Smart-Canteen.apk`) for students.
+            
+            ### What's included:
+            - Live menu browsing with category filters & veg/non-veg tags
+            - Zero-queue mobile ordering with collision-safe digital tokens
+            - Real-time order tracking & preparation status stepper
+            - Past orders history & food rating feedback
+            - Configurable backend API endpoint for campus Wi-Fi or Cloud Run
+            
+            **Download `Smart-Canteen.apk` below and install directly onto any Android device (Android 8.0+).**
