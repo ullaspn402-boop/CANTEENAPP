@@ -71,7 +71,7 @@ export function createRateLimiter(config: RateLimitConfig) {
 }
 
 // Pre-configured rate limiters with healthy headroom for polling and reverse proxies
-const isDev = process.env.NODE_ENV !== 'production';
+const isDev = (typeof import.meta !== 'undefined' ? import.meta.env?.MODE : null) !== 'production' && (typeof process !== 'undefined' ? process.env?.NODE_ENV : 'development') !== 'production';
 
 export const authRateLimiter = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute

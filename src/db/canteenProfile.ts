@@ -37,7 +37,8 @@ let officialProfile: OfficialCanteenProfile = {
 };
 
 export const getOfficialPasscode = (): string => {
-  return process.env.CANTEEN_MASTER_PASSCODE || process.env.OFFICIAL_PASSCODE || 'CANTEEN2026';
+  // Use import.meta.env for Vite/browser compatibility (process.env is Node.js only)
+  return import.meta.env.VITE_CANTEEN_MASTER_PASSCODE || import.meta.env.VITE_OFFICIAL_PASSCODE || 'CANTEEN2026';
 };
 
 export const OFFICIAL_PASSCODE = getOfficialPasscode();

@@ -100,7 +100,7 @@ export function requestOldEmailSecretCode(data: {
     type: 'order_status',
   });
 
-  const isDev = process.env.NODE_ENV !== 'production';
+  const isDev = (typeof import.meta !== 'undefined' ? import.meta.env?.MODE : null) !== 'production' && (typeof process !== 'undefined' ? process.env?.NODE_ENV : 'development') !== 'production';
   return {
     success: true,
     message: `Automated Secret Code dispatched to ${cleanEmail}. Please enter the code to verify old account ownership.`,
@@ -214,11 +214,11 @@ export function requestNewEmailSecretCode(data: {
     type: 'order_status',
   });
 
-  const isDev = process.env.NODE_ENV !== 'production';
+  const isDev2 = (typeof import.meta !== 'undefined' ? import.meta.env?.MODE : null) !== 'production' && (typeof process !== 'undefined' ? process.env?.NODE_ENV : 'development') !== 'production';
   return {
     success: true,
     message: `Activation Secret Code dispatched to ${cleanNew}. Please enter the code to finalize transfer.`,
-    ...(isDev ? { debugCode: code } : {}),
+    ...(isDev2 ? { debugCode: code } : {}),
   };
 }
 
