@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   StatusBar,
 } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { FoodItem, CartItem, Order } from './src/types';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -67,6 +68,10 @@ function MainApp() {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [selectedFoodItem, setSelectedFoodItem] = useState<FoodItem | null>(null);
+
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   const handleLoginSuccess = (
     user: { name: string; email: string; role: string },

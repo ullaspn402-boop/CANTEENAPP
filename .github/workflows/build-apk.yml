@@ -3,7 +3,7 @@ name: Build and Release Smart Canteen APK
 on:
   push:
     tags:
-      - 'v*' # Trigger on release tags like v1.0.0, v1.1.0
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -35,7 +35,7 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Accept Android SDK Licenses
+      - name: Accept Android SDK Licenses and Install Build Tools
         run: |
           yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools" || true
@@ -45,11 +45,7 @@ jobs:
           cd mobile
           npm install
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
-
-      # Build standalone APK. Ensure the CANTEEN_API_URL secret is set in GitHub Repository Secrets.
-      - name: Build Standalone APK
+      - name: Prebuild Android Project
         env:
           EXPO_PUBLIC_API_BASE_URL: ${{ secrets.CANTEEN_API_URL }}
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
@@ -57,36 +53,91 @@ jobs:
           cd mobile
           echo "EXPO_PUBLIC_API_BASE_URL=${{ secrets.CANTEEN_API_URL }}" > .env
           npx expo prebuild --platform android --clean
-          # Patch Kotlin version: replace 1.9.24 → 1.9.25 in generated build.gradle if present
+
           sed -i 's/kotlinVersion = "1.9.24"/kotlinVersion = "1.9.25"/g' android/build.gradle || true
           sed -i "s/kotlin_version = '1.9.24'/kotlin_version = '1.9.25'/g" android/build.gradle || true
-          # Also inject into gradle.properties as backup
           echo "kotlin.version=1.9.25" >> android/gradle.properties
           echo "android.suppressKotlinVersionCompatibilityCheck=1.9.25" >> android/gradle.properties
-          cd android
+
+          cat >> android/app/proguard-rules.pro << 'PROGUARD'
+          -keep class com.facebook.react.** { *; }
+          -keep class com.facebook.hermes.** { *; }
+          -keep class com.facebook.jni.** { *; }
+          -keep class expo.** { *; }
+          -keep class host.exp.** { *; }
+          -keep class com.swmansion.** { *; }
+          -dontwarn com.facebook.react.**
+          -dontwarn expo.**
+          PROGUARD
+
+          sed -i '/buildTypes {/,/}/ s/minifyEnabled true/minifyEnabled false/' android/app/build.gradle || true
+
+      - name: Build Release APK
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: |
+          cd mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease -PkotlinVersion=1.9.25 -Pkotlin.version=1.9.25
 
-          # Locate Android SDK build-tools directory
-          BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -n 1)
-          echo "Using Android build tools from: $BUILD_TOOLS_DIR"
+          # Ensure release build uses debug signing config if not specified
+          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' app/build.gradle || true
+          sed -i '/buildTypes {/,/}/ s/minifyEnabled true/minifyEnabled false/' app/build.gradle || true
 
-          # Ensure debug.keystore exists for signing
-          if [ ! -f app/debug.keystore ]; then
-            keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          ./gradlew assembleRelease \
+            -PkotlinVersion=1.9.25 \
+            -Pkotlin.version=1.9.25 \
+            --stacktrace
+
+      - name: Sign and Package APK
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: |
+          cd mobile/android
+
+          RAW_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$RAW_APK" ]; then
+            RAW_APK=$(find app/build/outputs/ -name "*.apk" 2>/dev/null | head -n 1)
+          fi
+          echo "Found raw APK: $RAW_APK"
+          if [ -z "$RAW_APK" ]; then
+            echo "ERROR: No APK found after build!"
+            exit 1
           fi
 
-          # Locate the generated release APK
-          RAW_APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
-          echo "Found generated release APK: $RAW_APK"
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          echo "Build tools: $BUILD_TOOLS_DIR"
 
-          # Align and Sign with apksigner (Crucial: Android OS kills unsigned/misaligned APKs on launch)
-          $BUILD_TOOLS_DIR/zipalign -p -f 4 "$RAW_APK" app-aligned.apk
-          $BUILD_TOOLS_DIR/apksigner sign --ks app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out ../../Smart-Canteen.apk app-aligned.apk
+          KEYSTORE_PATH="$HOME/.android/debug.keystore"
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            keytool -genkey -v \
+              -keystore "$KEYSTORE_PATH" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
 
-          # Verify signature
+          # If the APK is already signed and aligned by Gradle, verify directly
+          if $BUILD_TOOLS_DIR/apksigner verify "$RAW_APK" >/dev/null 2>&1; then
+            echo "APK is already signed by Gradle!"
+            cp "$RAW_APK" ../../Smart-Canteen.apk
+          else
+            echo "Signing APK with apksigner..."
+            $BUILD_TOOLS_DIR/zipalign -p -f 4 "$RAW_APK" app-aligned.apk
+            $BUILD_TOOLS_DIR/apksigner sign \
+              --ks "$KEYSTORE_PATH" \
+              --ks-pass pass:android \
+              --ks-key-alias androiddebugkey \
+              --key-pass pass:android \
+              --out ../../Smart-Canteen.apk \
+              app-aligned.apk
+          fi
+
           $BUILD_TOOLS_DIR/apksigner verify -v ../../Smart-Canteen.apk
-          echo "APK signature successfully verified!"
+          ls -lh ../../Smart-Canteen.apk
+          echo "Smart-Canteen.apk ready and verified!"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -106,15 +157,12 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ## 📱 Smart College Canteen Android Release
+            ## Smart College Canteen Android App
 
-            This release contains the standalone installable APK (`Smart-Canteen.apk`) for students.
+            Download Smart-Canteen.apk and install on any Android 8.0+ device.
 
-            ### What's included:
-            - Live menu browsing with category filters & veg/non-veg tags
-            - Zero-queue mobile ordering with collision-safe digital tokens
-            - Real-time order tracking & preparation status stepper
-            - Past orders history & food rating feedback
-            - Configurable backend API endpoint for campus Wi-Fi or Cloud Run
-
-            **Download `Smart-Canteen.apk` below and install directly onto any Android device (Android 8.0+).**
+            Install Steps:
+            1. Download Smart-Canteen.apk
+            2. Phone Settings > Security > Allow Unknown Apps
+            3. Open the APK file and tap Install
+            4. Open Smart Canteen from your app drawer
