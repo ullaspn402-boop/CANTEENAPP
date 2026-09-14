@@ -23,8 +23,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
 
       - name: Setup Java JDK
         uses: actions/setup-java@v4
@@ -32,8 +33,10 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools" || true
 
       - name: Install Mobile Dependencies
         run: |
@@ -44,20 +47,15 @@ jobs:
         run: npm install -g eas-cli
 
       # Build standalone APK. Ensure the CANTEEN_API_URL secret is set in GitHub Repository Secrets.
-      - name: Setup Kotlin 1.9.25
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
       - name: Build Standalone APK
         env:
           EXPO_PUBLIC_API_BASE_URL: ${{ secrets.CANTEEN_API_URL }}
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           cd mobile
           echo "EXPO_PUBLIC_API_BASE_URL=${{ secrets.CANTEEN_API_URL }}" > .env
           npx expo prebuild --platform android --clean
-          # Fix Kotlin/Compose version mismatch — suppress compatibility check
+          # Fix Kotlin/Compose version mismatch
           echo "kotlin.version=1.9.25" >> android/gradle.properties
           echo "android.suppressKotlinVersionCompatibilityCheck=1.9.25" >> android/gradle.properties
           cd android
@@ -82,14 +80,14 @@ jobs:
           prerelease: false
           body: |
             ## 📱 Smart College Canteen Android Release
-            
+
             This release contains the standalone installable APK (`Smart-Canteen.apk`) for students.
-            
+
             ### What's included:
             - Live menu browsing with category filters & veg/non-veg tags
             - Zero-queue mobile ordering with collision-safe digital tokens
             - Real-time order tracking & preparation status stepper
             - Past orders history & food rating feedback
             - Configurable backend API endpoint for campus Wi-Fi or Cloud Run
-            
+
             **Download `Smart-Canteen.apk` below and install directly onto any Android device (Android 8.0+).**
