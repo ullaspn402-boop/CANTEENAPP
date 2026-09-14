@@ -181,7 +181,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           <TouchableOpacity
             style={styles.googleButton}
             onPress={handleGoogleLogin}
-            disabled={loading || !request}
+            disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" />
@@ -195,6 +195,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             )}
           </TouchableOpacity>
 
+          {/* Instant Campus Student Access (Bypasses external web popups if needed) */}
+          <TouchableOpacity
+            style={styles.guestButton}
+            onPress={() => {
+              setMobileApiBaseUrl(serverUrl);
+              onLoginSuccess(
+                {
+                  name: 'Campus Student',
+                  email: 'student@college.edu',
+                  role: 'student',
+                },
+                null
+              );
+            }}
+          >
+            <Text style={styles.guestButtonText}>⚡ Instant Campus Student Access</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.secondaryButton}
@@ -307,6 +324,20 @@ const styles = StyleSheet.create({
   googleButtonText: {
     color: '#ffffff',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  guestButton: {
+    backgroundColor: '#fff7ed',
+    borderWidth: 1.5,
+    borderColor: '#ea580c',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestButtonText: {
+    color: '#ea580c',
+    fontSize: 14,
     fontWeight: '700',
   },
   secondaryButton: {

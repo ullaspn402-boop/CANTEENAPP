@@ -66,7 +66,27 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease -PkotlinVersion=1.9.25 -Pkotlin.version=1.9.25
-          cp app/build/outputs/apk/release/app-release-unsigned.apk ../../Smart-Canteen.apk || cp app/build/outputs/apk/release/*.apk ../../Smart-Canteen.apk
+
+          # Locate Android SDK build-tools directory
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -n 1)
+          echo "Using Android build tools from: $BUILD_TOOLS_DIR"
+
+          # Ensure debug.keystore exists for signing
+          if [ ! -f app/debug.keystore ]; then
+            keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          # Locate the generated release APK
+          RAW_APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
+          echo "Found generated release APK: $RAW_APK"
+
+          # Align and Sign with apksigner (Crucial: Android OS kills unsigned/misaligned APKs on launch)
+          $BUILD_TOOLS_DIR/zipalign -p -f 4 "$RAW_APK" app-aligned.apk
+          $BUILD_TOOLS_DIR/apksigner sign --ks app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out ../../Smart-Canteen.apk app-aligned.apk
+
+          # Verify signature
+          $BUILD_TOOLS_DIR/apksigner verify -v ../../Smart-Canteen.apk
+          echo "APK signature successfully verified!"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

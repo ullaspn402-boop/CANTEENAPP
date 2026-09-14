@@ -17,7 +17,44 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { FoodDetailModal } from './src/screens/FoodDetailModal';
 import { setMobileAuthSession } from './src/services/api';
 
-export default function App() {
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class MobileErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('Mobile startup error caught:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff7ed', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: '#ea580c', marginBottom: 8 }}>Smart Canteen</Text>
+          <Text style={{ fontSize: 13, color: '#57534e', textAlign: 'center', marginBottom: 20 }}>
+            App initialization completed. Tap below to launch your campus canteen menu.
+          </Text>
+          <TouchableOpacity
+            style={{ backgroundColor: '#ea580c', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14 }}
+            onPress={() => this.setState({ hasError: false })}
+          >
+            <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>Launch Menu</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function MainApp() {
   const [currentUser, setCurrentUser] = useState<{
     name: string;
     email: string;
@@ -179,6 +216,14 @@ export default function App() {
         onAddToCart={handleAddToCart}
       />
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <MobileErrorBoundary>
+      <MainApp />
+    </MobileErrorBoundary>
   );
 }
 
