@@ -108,6 +108,8 @@ async function startServer() {
     helmet({
       contentSecurityPolicy: false, // Prevents breaking Firebase Auth popups, Google OAuth avatars, and external CDN scripts
       crossOriginEmbedderPolicy: false,
+      crossOriginOpenerPolicy: false,
+      crossOriginResourcePolicy: false,
     })
   );
 
