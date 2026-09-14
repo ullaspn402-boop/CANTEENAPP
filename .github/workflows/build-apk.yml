@@ -55,12 +55,15 @@ jobs:
           cd mobile
           echo "EXPO_PUBLIC_API_BASE_URL=${{ secrets.CANTEEN_API_URL }}" > .env
           npx expo prebuild --platform android --clean
-          # Fix Kotlin/Compose version mismatch
+          # Patch Kotlin version: replace 1.9.24 → 1.9.25 in generated build.gradle if present
+          sed -i 's/kotlinVersion = "1.9.24"/kotlinVersion = "1.9.25"/g' android/build.gradle || true
+          sed -i "s/kotlin_version = '1.9.24'/kotlin_version = '1.9.25'/g" android/build.gradle || true
+          # Also inject into gradle.properties as backup
           echo "kotlin.version=1.9.25" >> android/gradle.properties
           echo "android.suppressKotlinVersionCompatibilityCheck=1.9.25" >> android/gradle.properties
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease -Pkotlin.version=1.9.25
+          ./gradlew assembleRelease -PkotlinVersion=1.9.25 -Pkotlin.version=1.9.25
           cp app/build/outputs/apk/release/app-release-unsigned.apk ../../Smart-Canteen.apk || cp app/build/outputs/apk/release/*.apk ../../Smart-Canteen.apk
 
       - name: Upload APK Artifact
