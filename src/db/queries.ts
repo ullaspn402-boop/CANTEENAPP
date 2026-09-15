@@ -12,7 +12,7 @@ import {
   users,
 } from './schema.ts';
 import { eq, desc, asc, and, sql, inArray } from 'drizzle-orm';
-import { Category, FoodItem, Order, CanteenStatus, OrderItem, FeedbackItem } from '../types.ts';
+import type { Category, FoodItem, Order, CanteenStatus, OrderItem, FeedbackItem } from '../types.ts';
 import { aiService } from '../services/ai/aiService.ts';
 import {
   getFallbackCategories,

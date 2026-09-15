@@ -1,4 +1,4 @@
-import { Category, FoodItem, Order, OrderStatus, Notification, AnalyticsData } from '../types.ts';
+import type { Category, FoodItem, Order, OrderStatus, Notification, AnalyticsData } from '../types.ts';
 
 // 1. In-Memory Resilient Categories
 export const fallbackCategories: Category[] = [

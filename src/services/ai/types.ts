@@ -1,4 +1,4 @@
-import { IntelligenceData } from '../../types.ts';
+import type { IntelligenceData } from '../../types.ts';
 
 export type CircuitBreakerState = 'CLOSED' | 'OPEN' | 'HALF-OPEN';
 

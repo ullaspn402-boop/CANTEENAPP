@@ -1,5 +1,5 @@
-import { AIProvider, AssistantAnswer } from '../types.ts';
-import { IntelligenceData } from '../../../types.ts';
+import type { AIProvider, AssistantAnswer } from '../types.ts';
+import type { IntelligenceData } from '../../../types.ts';
 
 export class FallbackProvider implements AIProvider {
   name = 'FallbackProvider (Resilient Campus Defaults)';

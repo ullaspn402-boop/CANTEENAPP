@@ -1,5 +1,5 @@
-import { AIProvider, AssistantAnswer } from '../types.ts';
-import { IntelligenceData } from '../../../types.ts';
+import type { AIProvider, AssistantAnswer } from '../types.ts';
+import type { IntelligenceData } from '../../../types.ts';
 import { db } from '../../../db/index.ts';
 import { orders, orderItems, foodItems, inventory, categories } from '../../../db/schema.ts';
 import { desc, eq, sql } from 'drizzle-orm';

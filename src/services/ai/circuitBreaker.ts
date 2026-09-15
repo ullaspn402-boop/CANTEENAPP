@@ -1,4 +1,4 @@
-import { CircuitBreakerState } from './types.ts';
+import type { CircuitBreakerState } from './types.ts';
 
 interface CircuitBreakerConfig {
   failureThreshold: number; // e.g. 3 consecutive failures
@@ -22,7 +22,11 @@ export class CircuitBreaker {
   private fallbackCount = 0;
   private latencySamples: number[] = [];
 
-  constructor(private config: CircuitBreakerConfig) {}
+  private config: CircuitBreakerConfig;
+
+  constructor(config: CircuitBreakerConfig) {
+    this.config = config;
+  }
 
   getState(): CircuitBreakerState {
     if (this.state === 'OPEN' && Date.now() >= this.nextAttemptTimestamp) {

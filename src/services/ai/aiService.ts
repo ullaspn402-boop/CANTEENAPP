@@ -1,5 +1,5 @@
-import { AIProvider, AssistantAnswer, AITelemetry } from './types.ts';
-import { IntelligenceData } from '../../types.ts';
+import type { AIProvider, AssistantAnswer, AITelemetry } from './types.ts';
+import type { IntelligenceData } from '../../types.ts';
 import { GeminiProvider } from './providers/geminiProvider.ts';
 import { LocalMLProvider } from './providers/localMLProvider.ts';
 import { FallbackProvider } from './providers/fallbackProvider.ts';

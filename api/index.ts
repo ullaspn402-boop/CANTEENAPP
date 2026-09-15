@@ -2,11 +2,12 @@
 // This wraps the Express app for Vercel's serverless environment.
 // The Vite frontend is served as static files from the dist/ folder.
 
-import express, { Response } from 'express';
+import express, { type Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import process from 'node:process';
-import { requireAuth, requireRole, AuthRequest, totalAuthFailures } from '../src/middleware/auth';
+import { requireAuth, requireRole, totalAuthFailures } from '../src/middleware/auth.ts';
+import type { AuthRequest } from '../src/middleware/auth.ts';
 import {
   generalRateLimiter,
   authRateLimiter,
@@ -14,8 +15,8 @@ import {
   aiRateLimiter,
   orderTrackingRateLimiter,
   totalRateLimitEvents,
-} from '../src/middleware/rateLimit';
-import { seedDatabase } from '../src/db/seed';
+} from '../src/middleware/rateLimit.ts';
+import { seedDatabase } from '../src/db/seed.ts';
 import {
   getCanteenStatus,
   updateCanteenStatus,
@@ -40,10 +41,10 @@ import {
   markNotificationRead,
   getAnalyticsDashboardData,
   getSmartCanteenIntelligence,
-} from '../src/db/queries';
+} from '../src/db/queries.ts';
 import { sql } from 'drizzle-orm';
-import { db } from '../src/db/index';
-import { updateUserRole, demoteUserToStudent, promoteUserToAdmin } from '../src/db/users';
+import { db } from '../src/db/index.ts';
+import { updateUserRole, demoteUserToStudent, promoteUserToAdmin } from '../src/db/users.ts';
 import {
   getOfficialCanteenProfile,
   registerOfficialCanteen,
@@ -51,16 +52,16 @@ import {
   transferOfficialCanteenEmail,
   updateOfficialCanteenLocation,
   updateCampusCoverage,
-} from '../src/db/canteenProfile';
+} from '../src/db/canteenProfile.ts';
 import {
   requestOldEmailSecretCode,
   verifyOldEmailSecretCode,
   requestNewEmailSecretCode,
   finalizeEmailTransferWithCodes,
   getRecentSecurityDispatches,
-} from '../src/services/verificationCodeService';
-import { addFallbackNotification } from '../src/db/fallbackData';
-import { aiService } from '../src/services/ai/aiService';
+} from '../src/services/verificationCodeService.ts';
+import { addFallbackNotification } from '../src/db/fallbackData.ts';
+import { aiService } from '../src/services/ai/aiService.ts';
 
 let totalBackendErrors = 0;
 
