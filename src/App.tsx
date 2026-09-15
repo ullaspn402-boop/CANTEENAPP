@@ -154,7 +154,6 @@ function CanteenAppContent() {
             {currentTab === 'intelligence' && <SmartIntelligence />}
             {currentTab === 'menu-mgmt' && <MenuManager />}
             {currentTab === 'feedback' && <FeedbackManager />}
-            {currentTab === 'health' && <AdminSystemHealth />}
           </>
         )}
       </main>
@@ -177,14 +176,12 @@ function CanteenAppContent() {
           order={selectedTokenOrder}
           onClose={() => setSelectedTokenOrder(null)}
           onOrderUpdated={(updated) => {
-            if (activeOrder?.id === updated.id) {
-              if (updated.status === 'completed') {
-                setActiveOrder(null);
-                setSelectedTokenOrder(null);
-                setOrderCompletedSummary(updated);
-              } else {
-                setActiveOrder(updated);
-              }
+            if (updated.status === 'completed') {
+              if (activeOrder?.id === updated.id) setActiveOrder(null);
+              setSelectedTokenOrder(null);
+              setOrderCompletedSummary(updated);
+            } else if (activeOrder?.id === updated.id) {
+              setActiveOrder(updated);
             }
           }}
         />

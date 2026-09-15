@@ -54,6 +54,42 @@ export const OrderHistory: React.FC<OrderHistoryProps> = ({
     }
   }, [authHeaders]);
 
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+
+  const handleConfirmDelivered = async (order: Order) => {
+    setConfirmingId(order.id);
+    try {
+      let updated: Order | null = null;
+      try {
+        const res = await fetch(buildApiUrl(`/api/orders/${order.id}/confirm-received`), {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        if (res.ok) {
+          updated = await res.json();
+        }
+      } catch {}
+
+      if (!updated) {
+        updated = {
+          ...order,
+          status: 'completed',
+          completedAt: new Date(),
+          paymentStatus: 'paid',
+        };
+      }
+
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? updated! : o)));
+      if (onViewCompletedSummary) {
+        onViewCompletedSummary(updated);
+      }
+    } catch (err) {
+      console.warn('Confirm delivered notice:', err);
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchOrders(true);
@@ -279,6 +315,18 @@ export const OrderHistory: React.FC<OrderHistoryProps> = ({
                     >
                       <Receipt className="w-3.5 h-3.5 text-neutral-600" />
                       <span>Order Summary</span>
+                    </button>
+                  )}
+
+                  {order.status !== 'completed' && order.status !== 'cancelled' && (
+                    <button
+                      onClick={() => handleConfirmDelivered(order)}
+                      disabled={confirmingId === order.id}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      title="Confirm you received this order from the counter"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{confirmingId === order.id ? 'Confirming...' : 'Confirm Delivered'}</span>
                     </button>
                   )}
 

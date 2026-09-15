@@ -337,17 +337,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <MessageSquare className="w-4 h-4" />
                   Feedback
                 </button>
-                <button
-                  onClick={() => setCurrentTab('health')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                    currentTab === 'health'
-                      ? 'bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200'
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
-                  }`}
-                >
-                  <Activity className="w-4 h-4 text-emerald-600" />
-                  System Health
-                </button>
               </>
             )}
           </nav>

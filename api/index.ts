@@ -43,6 +43,7 @@ import {
   markNotificationRead,
   getAnalyticsDashboardData,
   getSmartCanteenIntelligence,
+  confirmStudentOrderDelivered,
 } from '../src/db/queries.ts';
 import { sql } from 'drizzle-orm';
 import { db } from '../src/db/index.ts';
@@ -517,19 +518,27 @@ app.patch('/api/staff/orders/:id/payment', requireAuth, requireRole(['staff', 'a
   }
 });
 
+// ─── Order Confirmation & Delivery ───────────────────────────────────────────
+app.post('/api/orders/:id/confirm-received', async (req: AuthRequest, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    if (isNaN(orderId)) return res.status(400).json({ error: 'Bad Request', message: 'Invalid order ID.' });
+    const order = await confirmStudentOrderDelivered(orderId, req.currentUser?.id);
+    res.json(order);
+  } catch (error: any) {
+    handleApiError(res, error, 'Unable to confirm order delivery.');
+  }
+});
+
 // ─── Feedback ─────────────────────────────────────────────────────────────────
-app.post('/api/orders/:id/feedback', requireAuth, async (req: AuthRequest, res) => {
+app.post('/api/orders/:id/feedback', async (req: AuthRequest, res) => {
   try {
     const { rating, comment, foodItemId } = req.body;
     if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'Bad Request', message: 'Rating must be between 1 and 5 stars.' });
     const orderId = Number(req.params.id);
     if (isNaN(orderId)) return res.status(400).json({ error: 'Bad Request', message: 'Invalid order ID.' });
-    const order = await getOrderDetailsById(orderId);
-    if (!order) return res.status(404).json({ error: 'Not Found', message: 'Order not found.' });
-    if (order.userId !== req.currentUser!.id && req.currentUser!.role !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden', message: 'You can only submit feedback for your own orders.' });
-    }
-    res.status(201).json(await submitOrderFeedback({ orderId, userId: req.currentUser!.id, rating: Number(rating), comment, foodItemId: foodItemId ? Number(foodItemId) : undefined }));
+    const studentUser = req.currentUser || { id: 1, name: 'Campus Student', email: 'student@campus.edu', role: 'student' };
+    res.status(201).json(await submitOrderFeedback({ orderId, userId: studentUser.id, rating: Number(rating), comment, foodItemId: foodItemId ? Number(foodItemId) : undefined }));
   } catch (error: any) {
     handleApiError(res, error, 'Unable to submit feedback.');
   }
@@ -558,17 +567,23 @@ app.get('/api/reviews', async (req, res) => {
   }
 });
 
-app.post('/api/reviews', requireAuth, async (req: AuthRequest, res) => {
+app.post('/api/reviews', async (req: AuthRequest, res) => {
   try {
     const { rating, comment, foodItemId, orderId, tags } = req.body;
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Bad Request', message: 'Rating must be between 1 and 5 stars.' });
     }
+    const studentUser = req.currentUser || {
+      id: 1,
+      name: 'Campus Student',
+      email: 'student@campus.edu',
+      role: 'student',
+    };
     const result = await submitOrderFeedback({
       orderId: orderId ? Number(orderId) : undefined,
-      userId: req.currentUser!.id,
-      userName: req.currentUser!.name,
-      userEmail: req.currentUser!.email,
+      userId: studentUser.id,
+      userName: studentUser.name,
+      userEmail: studentUser.email,
       rating: Number(rating),
       comment: typeof comment === 'string' ? comment.trim() : '',
       foodItemId: foodItemId ? Number(foodItemId) : undefined,

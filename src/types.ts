@@ -101,6 +101,7 @@ export interface ReviewItem {
   comment: string;
   foodItemId?: number | null;
   foodItemName?: string | null;
+  foodItemImage?: string | null;
   tags?: string[];
   helpfulCount?: number;
   createdAt: string | Date;

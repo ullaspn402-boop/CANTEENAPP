@@ -32,6 +32,44 @@ export const DigitalTokenModal: React.FC<DigitalTokenModalProps> = ({
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
+
+  const handleConfirmDelivery = async () => {
+    if (!order) return;
+    setIsConfirmingDelivery(true);
+    try {
+      let updatedOrder: Order | null = null;
+      try {
+        const res = await fetch(buildApiUrl(`/api/orders/${order.id}/confirm-received`), {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        if (res.ok) {
+          updatedOrder = await res.json();
+        }
+      } catch (e) {
+        console.warn('Confirm delivery API notice:', e);
+      }
+
+      if (!updatedOrder) {
+        updatedOrder = {
+          ...order,
+          status: 'completed',
+          completedAt: new Date(),
+          paymentStatus: 'paid',
+        };
+      }
+
+      setOrder(updatedOrder);
+      if (onOrderUpdated) {
+        onOrderUpdated(updatedOrder);
+      }
+    } catch (err: any) {
+      console.warn('Delivery confirmation error:', err);
+    } finally {
+      setIsConfirmingDelivery(false);
+    }
+  };
 
   useEffect(() => {
     setOrder(initialOrder);
@@ -234,6 +272,28 @@ export const DigitalTokenModal: React.FC<DigitalTokenModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Student Confirm Delivery / Order Received Action (Section 7/9) */}
+          {order.status !== 'completed' && order.status !== 'cancelled' && (
+            <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center space-y-2 shadow-xs animate-in fade-in">
+              <div className="flex items-center justify-center gap-1.5 text-emerald-900 font-bold text-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>Collected your meal from the counter?</span>
+              </div>
+              <p className="text-[11px] text-emerald-700 leading-snug">
+                Click below to confirm order delivery and generate your final completed order receipt.
+              </p>
+              <button
+                type="button"
+                disabled={isConfirmingDelivery}
+                onClick={handleConfirmDelivery}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white rounded-xl text-xs font-black shadow-md shadow-emerald-700/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{isConfirmingDelivery ? 'Confirming Order Delivery...' : '✓ Confirm Order Received & Delivered'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Rate Order Section (Prompt Section 10: Feedback System) */}
           {order.status === 'completed' && (

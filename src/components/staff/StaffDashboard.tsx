@@ -228,7 +228,7 @@ export const StaffDashboard: React.FC = () => {
             title="Transfer official canteen authority or change official email"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Transfer Official Email</span>
+            <span>Settings: Change Account</span>
           </button>
           <button
             onClick={fetchStaffOrders}

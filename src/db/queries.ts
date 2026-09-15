@@ -17,6 +17,7 @@ import { aiService } from '../services/ai/aiService.ts';
 import {
   getFallbackCategories,
   getFallbackFoodItems,
+  fallbackFoodItems,
   createFallbackFoodItem,
   updateFallbackFoodItem,
   deleteFallbackFoodItem,
@@ -35,6 +36,7 @@ import {
   addFallbackFeedback,
   getFallbackFeedbackSummary,
   toggleFeedbackHelpful,
+  confirmFallbackOrderDelivered,
 } from './fallbackData.ts';
 
 // In-memory idempotency store to prevent duplicate orders within a 30-second window
@@ -358,13 +360,13 @@ export async function deleteFoodItemRecord(id: number) {
  * Concurrency-safe, Collision-free Token Generator
  */
 async function generateUniqueToken(tx: any): Promise<string> {
-  // Generate random base with 3-digit sequence and retry if collision exists
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const countRows = await tx.select({ count: sql<number>`count(*)` }).from(orders);
-    const orderCount = Number(countRows[0]?.count) || 0;
-    const baseSeq = 100 + ((orderCount + attempt * 7 + Math.floor(Math.random() * 50)) % 899);
-    const candidate = `C${baseSeq}`;
+  // Generate sequential unique token based on current order count
+  const countRows = await tx.select({ count: sql<number>`count(*)` }).from(orders);
+  const orderCount = Number(countRows[0]?.count) || 0;
+  const baseNum = 101 + orderCount;
 
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const candidate = `C${baseNum + attempt}`;
     const existing = await tx
       .select({ id: orders.id })
       .from(orders)
@@ -376,7 +378,7 @@ async function generateUniqueToken(tx: any): Promise<string> {
     }
   }
 
-  // Fallback high-entropy token if high density of orders
+  // Fallback high-entropy token if dense collisions
   const suffix = Math.floor(1000 + Math.random() * 9000);
   return `C${suffix}`;
 }
@@ -430,9 +432,30 @@ export async function createStudentOrder(
         if (reqItem.quantity <= 0) {
           throw new Error('Quantity must be greater than zero.');
         }
-        const found = itemMap.get(reqItem.foodItemId);
+        let found = itemMap.get(reqItem.foodItemId);
         if (!found) {
-          throw new Error(`Food item #${reqItem.foodItemId} does not exist.`);
+          const fb = fallbackFoodItems.find((f) => f.id === reqItem.foodItemId);
+          if (fb) {
+            found = {
+              id: fb.id,
+              categoryId: fb.categoryId,
+              name: fb.name,
+              description: fb.description,
+              price: fb.price,
+              imageUrl: fb.imageUrl,
+              isVeg: fb.isVeg,
+              isAvailable: fb.isAvailable,
+              isActive: fb.isActive,
+              prepTimeMinutes: fb.prepTimeMinutes,
+              rating: String(fb.rating),
+              ratingCount: fb.ratingCount,
+              totalOrders: fb.totalOrders,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } as any;
+          } else {
+            throw new Error(`Fallback required: food item #${reqItem.foodItemId}`);
+          }
         }
         if (found.isActive === false) {
           throw new Error(`"${found.name}" has been deactivated from the canteen menu.`);
@@ -844,6 +867,20 @@ export async function updateOrderPaymentStatusByStaff(
     console.warn('PostgreSQL unavailable, updating payment in resilient orders store:', error?.message || error);
     return updateFallbackOrderPayment(orderId, paymentStatus);
   }
+}
+
+/**
+ * Confirm Order Delivery / Completion (Can be triggered by Student upon pickup or Staff)
+ * Updates status to completed, sets completedAt, and notifies both parties with full receipt summary
+ */
+export async function confirmStudentOrderDelivered(orderId: number, userId?: number): Promise<Order> {
+  try {
+    const updated = await updateOrderStatusByStaff(orderId, 'completed');
+    if (updated) return updated;
+  } catch (err: any) {
+    console.warn('PostgreSQL delivery confirmation notice:', err?.message || err);
+  }
+  return confirmFallbackOrderDelivered(orderId);
 }
 
 // Feedback & Reviews System
