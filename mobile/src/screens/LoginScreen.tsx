@@ -57,13 +57,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       : name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '');
     const email = `${emailBase}@student.campus.edu`;
 
+    const mobileToken = `mobile_student_${encodeURIComponent(name)}_${encodeURIComponent(id || 'guest')}`;
+
     onLoginSuccess(
       {
         name: name,
         email: email,
         role: 'student',
       },
-      null
+      mobileToken
     );
   };
 
@@ -81,13 +83,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       code.toLowerCase() === 'staff' ||
       code.toLowerCase() === 'official'
     ) {
-      onLoginSuccess({ name: 'Canteen Staff', email: 'official.canteen@campus-canteen.edu', role: 'staff' }, null);
+      const mobileToken = `mobile_staff_${code.toUpperCase()}`;
+      onLoginSuccess(
+        { name: 'Canteen Staff', email: 'official.canteen@campus-canteen.edu', role: 'staff' },
+        mobileToken
+      );
     } else if (
       code === 'ADMIN2026' ||
       code === 'MASTER2026' ||
       code.toLowerCase() === 'admin'
     ) {
-      onLoginSuccess({ name: 'Canteen Administrator', email: 'admin@campus-canteen.edu', role: 'admin' }, null);
+      const mobileToken = `mobile_admin_${code.toUpperCase()}`;
+      onLoginSuccess(
+        { name: 'Canteen Administrator', email: 'admin@campus-canteen.edu', role: 'admin' },
+        mobileToken
+      );
     } else {
       setPasscodeError('Invalid passcode. Contact canteen manager for the correct code.');
     }

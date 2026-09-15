@@ -9,9 +9,12 @@
  * - Production cloud deployment uses: 'https://<CLOUD_APP_URL>'
  */
 
+declare const process: any;
+declare const __DEV__: boolean;
+
 // Primary production API URL resolved from EXPO_PUBLIC_API_BASE_URL (or GitHub secret CANTEEN_API_URL).
 const configuredEnvUrl =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_BASE_URL)
+  (typeof process !== 'undefined' && process?.env?.EXPO_PUBLIC_API_BASE_URL)
     ? process.env.EXPO_PUBLIC_API_BASE_URL.trim()
     : '';
 

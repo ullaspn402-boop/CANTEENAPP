@@ -53,7 +53,8 @@ export interface Order {
   id: number;
   tokenNumber: string;
   userId: number;
-  status: 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  customerName?: string;
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
   totalAmount: number;
   paymentStatus: string;
   paymentMethod: string;

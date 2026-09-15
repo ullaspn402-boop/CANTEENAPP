@@ -48,12 +48,14 @@ export async function fetchFoodItems(params?: {
   isVeg?: boolean;
   search?: string;
   sortBy?: string;
+  includeInactive?: boolean;
 }): Promise<FoodItem[]> {
   const query = new URLSearchParams();
   if (params?.categoryId) query.append('categoryId', params.categoryId.toString());
   if (params?.isVeg !== undefined) query.append('isVeg', params.isVeg.toString());
   if (params?.search) query.append('search', params.search);
   if (params?.sortBy) query.append('sortBy', params.sortBy);
+  if (params?.includeInactive) query.append('includeInactive', 'true');
 
   const url = buildMobileApiUrl(`/api/food-items?${query.toString()}`);
   const res = await fetch(url, { headers: getHeaders() });
@@ -177,3 +179,55 @@ export async function updateOrderStatus(orderId: number, status: string): Promis
   }
   return await res.json();
 }
+
+export async function toggleFoodItemAvailability(id: number, isAvailable: boolean): Promise<FoodItem> {
+  const res = await fetch(buildMobileApiUrl(`/api/food-items/${id}/toggle-availability`), {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify({ isAvailable }),
+  });
+  if (!res.ok) {
+    let message = 'Failed to toggle food availability';
+    try {
+      const err = await res.json();
+      message = err.message || err.error || message;
+    } catch {}
+    throw new Error(message);
+  }
+  return await res.json();
+}
+
+export async function updateFoodItemStock(id: number, availableStock: number): Promise<FoodItem> {
+  const res = await fetch(buildMobileApiUrl(`/api/food-items/${id}/stock`), {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify({ availableStock }),
+  });
+  if (!res.ok) {
+    let message = 'Failed to update stock';
+    try {
+      const err = await res.json();
+      message = err.message || err.error || message;
+    } catch {}
+    throw new Error(message);
+  }
+  return await res.json();
+}
+
+export async function updateFoodItemDetails(id: number, data: Partial<FoodItem>): Promise<FoodItem> {
+  const res = await fetch(buildMobileApiUrl(`/api/food-items/${id}`), {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    let message = 'Failed to update item';
+    try {
+      const err = await res.json();
+      message = err.message || err.error || message;
+    } catch {}
+    throw new Error(message);
+  }
+  return await res.json();
+}
+

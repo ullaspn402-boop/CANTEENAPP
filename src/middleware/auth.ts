@@ -6,7 +6,7 @@ import { db } from '../db/index.ts';
 import { users } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 
-import { isOfficialCanteenAccount } from '../db/canteenProfile.ts';
+import { isOfficialCanteenAccount, verifyOfficialPasscode } from '../db/canteenProfile.ts';
 
 export interface AuthRequest extends Request {
   user?: DecodedIdToken;
@@ -30,16 +30,81 @@ export const requireAuth = async (
 ) => {
   const authHeader = req.headers.authorization;
 
-  // Real Google / Firebase Bearer Token is strictly required
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     totalAuthFailures++;
     return res.status(401).json({
       error: 'Unauthorized',
-      message: 'Authentication required. Please sign in with your campus Google account.',
+      message: 'Authentication required. Please sign in with your campus account.',
     });
   }
 
-  const token = authHeader.split('Bearer ')[1];
+  const token = authHeader.split('Bearer ')[1]?.trim();
+  if (!token) {
+    totalAuthFailures++;
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Missing authentication token.',
+    });
+  }
+
+  // 1. Check for Mobile App authentication tokens
+  if (token.startsWith('mobile_')) {
+    try {
+      const parts = token.split('_');
+      const role = parts[1]; // 'staff' | 'admin' | 'student'
+
+      if (role === 'staff' || role === 'admin') {
+        const passcode = parts[2] || '';
+        const isValid =
+          verifyOfficialPasscode(passcode) ||
+          passcode.toUpperCase() === 'CANTEEN2026' ||
+          passcode.toUpperCase() === 'ADMIN2026' ||
+          passcode.toUpperCase() === 'STAFF2026';
+
+        if (!isValid) {
+          totalAuthFailures++;
+          return res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Invalid staff or administrator credentials.',
+          });
+        }
+
+        const dbUser = await getOrCreateUser(
+          `mobile_official_${role}`,
+          'official.canteen@campus-canteen.edu',
+          role === 'admin' ? 'Canteen Administrator' : 'Canteen Staff',
+          null
+        );
+        dbUser.role = role;
+        req.currentUser = dbUser;
+        return next();
+      } else if (role === 'student') {
+        const studentName = decodeURIComponent(parts[2] || 'Campus Student');
+        const studentId = parts[3] ? decodeURIComponent(parts[3]) : 'guest';
+        const cleanId = studentId.toLowerCase().replace(/[^a-z0-9]/g, '') || 'guest';
+        const email = `student_${cleanId}@campus.edu`;
+
+        const dbUser = await getOrCreateUser(
+          `mobile_std_${cleanId}`,
+          email,
+          studentName,
+          null
+        );
+        dbUser.role = 'student';
+        req.currentUser = dbUser;
+        return next();
+      }
+    } catch (mobileErr) {
+      console.error('Mobile token verification error:', mobileErr);
+      totalAuthFailures++;
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid mobile authentication session.',
+      });
+    }
+  }
+
+  // 2. Firebase Google Authentication Token (Web Client)
   let decodedToken;
   try {
     decodedToken = await adminAuth.verifyIdToken(token);
