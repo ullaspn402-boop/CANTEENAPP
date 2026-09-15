@@ -1,16 +1,16 @@
 {
   "version": 2,
-  "buildCommand": "npm run vercel-build",
+  "buildCommand": "npm run build:frontend",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.mjs": {
+    "api/index.ts": {
       "maxDuration": 30
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.mjs"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/((?!api/.*).*)",
@@ -18,4 +18,3 @@
     }
   ]
 }
-
