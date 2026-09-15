@@ -20,6 +20,7 @@ import {
   Store,
   Navigation,
   Compass,
+  GraduationCap,
 } from 'lucide-react';
 
 interface StudentHomeProps {
@@ -110,10 +111,17 @@ export const StudentHome: React.FC<StudentHomeProps> = ({
         <div className="absolute right-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
+            {/* College & Canteen Name */}
+            {selectedCanteen?.campusName && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-amber-100 text-[11px] font-semibold mb-1">
+                <GraduationCap className="w-3.5 h-3.5 text-amber-200" />
+                <span>{selectedCanteen.campusName}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-amber-100 text-xs sm:text-sm font-semibold mb-1">
               <span>{getGreeting()}</span>
               <span>•</span>
-              <span>{user?.name || 'Rahul Sharma'} 👋</span>
+              <span>{user?.name || 'Student'} 👋</span>
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight">
               What are you craving today?
@@ -133,7 +141,7 @@ export const StudentHome: React.FC<StudentHomeProps> = ({
                 <Store className="w-3.5 h-3.5 text-amber-200" />
                 <span>Canteen: <strong>{selectedCanteen?.canteenName || 'Central Campus Canteen'}</strong></span>
                 <span className="text-[10px] bg-blue-500/40 text-blue-100 px-1.5 py-0.2 rounded font-semibold ml-1">
-                  Verified Official
+                  ✓ Verified
                 </span>
               </button>
 
@@ -145,20 +153,20 @@ export const StudentHome: React.FC<StudentHomeProps> = ({
                 >
                   <Navigation className="w-3.5 h-3.5 text-emerald-300" />
                   <span>
-                    {isInsideCampus ? 'On Campus' : 'Proximity'}: ~
+                    {isInsideCampus ? '📍 On Campus' : 'Nearby'}: ~
                     {distanceMeters < 1000 ? `${distanceMeters}m` : `${(distanceMeters / 1000).toFixed(1)}km`} away
                   </span>
                 </button>
               )}
 
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-md text-white border border-white/30">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={`w-2 h-2 rounded-full ${canteenStatus?.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
                 {canteenStatus?.isOpen ? 'Canteen OPEN' : 'Canteen CLOSED'}
               </span>
 
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-black/20 backdrop-blur-md text-amber-100">
                 <Clock className="w-3.5 h-3.5 text-amber-300" />
-                Estimated waiting time: ~{canteenStatus?.currentWaitTimeMinutes || 8} mins
+                ~{canteenStatus?.currentWaitTimeMinutes || 8} mins wait
               </span>
 
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-white">

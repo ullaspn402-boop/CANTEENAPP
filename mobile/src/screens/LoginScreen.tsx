@@ -321,7 +321,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 style={[styles.input, styles.passcodeInput, passcodeError ? styles.inputError : null]}
                 value={staffPasscode}
                 onChangeText={(t) => { setStaffPasscode(t); setPasscodeError(''); }}
-                placeholder={staffRole === 'admin' ? 'e.g. ADMIN2026' : 'e.g. CANTEEN2026'}
+                placeholder="Enter authorized passcode"
                 placeholderTextColor="#a8a29e"
                 autoCapitalize="characters"
                 secureTextEntry={!showPasscode}
@@ -344,14 +344,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 {staffRole === 'admin' ? '🛡️ Login as Administrator' : '👨‍🍳 Login as Canteen Staff'}
               </Text>
             </TouchableOpacity>
-
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>📋 Default Passcodes</Text>
-              <Text style={styles.infoText}>
-                Staff: <Text style={styles.infoCode}>CANTEEN2026</Text>{'\n'}
-                Admin: <Text style={styles.infoCode}>ADMIN2026</Text>
-              </Text>
-            </View>
           </View>
 
           <Text style={styles.footerNote}>Only authorized canteen personnel may access this portal.</Text>

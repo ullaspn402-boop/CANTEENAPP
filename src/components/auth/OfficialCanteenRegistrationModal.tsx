@@ -17,6 +17,9 @@ import {
   Store,
   KeyRound,
   Lock,
+  Eye,
+  EyeOff,
+  GraduationCap,
 } from 'lucide-react';
 
 interface OfficialCanteenRegistrationModalProps {
@@ -35,6 +38,8 @@ export const OfficialCanteenRegistrationModal: React.FC<OfficialCanteenRegistrat
   const [officialEmail, setOfficialEmail] = useState(user?.email || firebaseUser?.email || '');
   const [phone, setPhone] = useState('+91 98765 43210');
   const [canteenName, setCanteenName] = useState('Campus Central Food Court');
+  const [campusName, setCampusName] = useState('Main University Campus, Engineering Block A');
+  const [showPasscode, setShowPasscode] = useState(false);
   const [photoUrl, setPhotoUrl] = useState(
     firebaseUser?.photoURL ||
       'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=400&auto=format&fit=crop&q=80'
@@ -138,6 +143,7 @@ export const OfficialCanteenRegistrationModal: React.FC<OfficialCanteenRegistrat
           officialEmail,
           phone,
           canteenName,
+          campusName,
           photoUrl,
           passcode,
         }),
@@ -238,11 +244,29 @@ export const OfficialCanteenRegistrationModal: React.FC<OfficialCanteenRegistrat
             </p>
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5 text-neutral-500" />
+              <span>College / University / Campus Name *</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={campusName}
+              onChange={(e) => setCampusName(e.target.value)}
+              placeholder="e.g. RV College of Engineering, Oxford Campus"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-xs font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-[10px] text-neutral-400 mt-1">
+              This college name will be prominently displayed in the student portal so students can identify and order from their canteen.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
                 <Store className="w-3.5 h-3.5 text-neutral-500" />
-                <span>Canteen Stall Name</span>
+                <span>Canteen Stall Name *</span>
               </label>
               <input
                 type="text"
@@ -427,18 +451,38 @@ export const OfficialCanteenRegistrationModal: React.FC<OfficialCanteenRegistrat
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-              <span>Official Canteen Verification Passcode</span>
+            <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                <span>Official Canteen Verification Passcode *</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPasscode(!showPasscode)}
+                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+              >
+                {showPasscode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showPasscode ? 'Hide Passcode' : 'Show Passcode'}</span>
+              </button>
             </label>
-            <input
-              type="password"
-              required
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Enter Authorized Master Passkey"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-blue-300 bg-blue-50/50 font-mono text-xs font-bold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                type={showPasscode ? 'text' : 'password'}
+                required
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                placeholder="Enter Authorized Master Passkey"
+                className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-blue-300 bg-blue-50/50 font-mono text-xs font-bold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasscode(!showPasscode)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                title={showPasscode ? 'Hide Passcode' : 'Show Passcode'}
+              >
+                {showPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-blue-600" />}
+              </button>
+            </div>
             <p className="text-[10px] text-neutral-400 mt-1">
               Authorized Canteen Master Passkey issued by campus administration
             </p>

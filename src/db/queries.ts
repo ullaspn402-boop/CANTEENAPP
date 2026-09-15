@@ -40,8 +40,8 @@ interface IdempotencyRecord {
 }
 const orderIdempotencyCache = new Map<string, IdempotencyRecord>();
 
-// Clean up expired idempotency keys periodically
-setInterval(() => {
+// Clean up expired idempotency keys periodically — .unref() so it doesn't block serverless shutdown
+const _idempotencyCleanup = setInterval(() => {
   const now = Date.now();
   for (const [key, record] of orderIdempotencyCache.entries()) {
     if (now - record.timestamp > 45000) {
@@ -49,6 +49,7 @@ setInterval(() => {
     }
   }
 }, 30000);
+if (typeof _idempotencyCleanup.unref === 'function') _idempotencyCleanup.unref();
 
 // Strict State Machine Transitions
 export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {

@@ -14,8 +14,8 @@ interface ClientRecord {
 // In-memory store for rate limiting
 const rateLimitStore = new Map<string, ClientRecord>();
 
-// Periodic cleanup of expired records (every 2 minutes)
-setInterval(() => {
+// Periodic cleanup of expired records (every 2 minutes) — .unref() so it doesn't block serverless shutdown
+const _rateLimitCleanup = setInterval(() => {
   const now = Date.now();
   for (const [key, record] of rateLimitStore.entries()) {
     if (now > record.resetTime) {
@@ -23,6 +23,7 @@ setInterval(() => {
     }
   }
 }, 120000);
+if (typeof _rateLimitCleanup.unref === 'function') _rateLimitCleanup.unref();
 
 export let totalRateLimitEvents = 0;
 

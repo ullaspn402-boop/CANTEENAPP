@@ -18,6 +18,8 @@ import {
   Sparkles,
   RefreshCw,
   BellRing,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 interface TransferOfficialAccountModalProps {
@@ -41,6 +43,7 @@ export const TransferOfficialAccountModal: React.FC<TransferOfficialAccountModal
 
   // Step 1: Old Email Inputs
   const [passcode, setPasscode] = useState('');
+  const [showPasscode, setShowPasscode] = useState(false);
   const [oldEmailCode, setOldEmailCode] = useState('');
   const [oldCodeDispatched, setOldCodeDispatched] = useState(false);
   const [transferSessionToken, setTransferSessionToken] = useState<string | null>(null);
@@ -323,17 +326,37 @@ export const TransferOfficialAccountModal: React.FC<TransferOfficialAccountModal
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Master Canteen Passcode *</span>
+                <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Master Canteen Passcode *</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPasscode(!showPasscode)}
+                    className="text-[11px] font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    {showPasscode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showPasscode ? 'Hide' : 'Show'}</span>
+                  </button>
                 </label>
-                <input
-                  type="password"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="Enter Master Passcode"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 font-mono text-xs font-semibold text-neutral-900 focus:ring-2 focus:ring-amber-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showPasscode ? 'text' : 'password'}
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    placeholder="Enter Master Passcode"
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-neutral-300 font-mono text-xs font-semibold text-neutral-900 focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasscode(!showPasscode)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                    title={showPasscode ? 'Hide Passcode' : 'Show Passcode'}
+                  >
+                    {showPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-amber-600" />}
+                  </button>
+                </div>
               </div>
 
               {!oldCodeDispatched ? (
