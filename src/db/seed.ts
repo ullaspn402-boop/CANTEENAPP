@@ -15,9 +15,9 @@ import { sql } from 'drizzle-orm';
 
 export async function seedDatabase() {
   try {
-    // Check if foodItems already seeded
-    const existingItems = await db.select().from(foodItems).limit(1);
-    if (existingItems.length > 0) {
+    // Check if foodItems already fully seeded (require at least 5 items)
+    const existingItems = await db.select().from(foodItems).limit(5);
+    if (existingItems.length >= 5) {
       console.log('Database already seeded.');
       return;
     }
