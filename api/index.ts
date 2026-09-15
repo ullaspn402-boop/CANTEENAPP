@@ -667,9 +667,6 @@ app.post('/api/ai/assistant', aiRateLimiter, requireAuth, async (req: AuthReques
   }
 });
 
-// Export the Express app as the Vercel serverless handler (compatible with both CJS require and ESM import)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = app;
-  (module.exports as any).default = app;
-}
+// Export the Express app as the Vercel serverless handler
 export default app;
+
