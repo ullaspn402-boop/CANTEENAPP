@@ -5,6 +5,7 @@ import { CanteenProvider } from './context/CanteenContext.tsx';
 import { Navbar } from './components/Navbar.tsx';
 import { StudentHome } from './components/student/StudentHome.tsx';
 import { OrderHistory } from './components/student/OrderHistory.tsx';
+import { ReviewsPage } from './components/student/ReviewsPage.tsx';
 import { CartCheckoutDrawer } from './components/student/CartCheckoutDrawer.tsx';
 import { DigitalTokenModal } from './components/student/DigitalTokenModal.tsx';
 import { OrderPlacedSummaryModal } from './components/student/OrderPlacedSummaryModal.tsx';
@@ -111,11 +112,18 @@ function CanteenAppContent() {
                   if (activeOrder) setSelectedTokenOrder(activeOrder);
                 }}
                 onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
+                onOpenReviews={() => setCurrentTab('reviews')}
               />
             )}
             {currentTab === 'orders' && (
               <OrderHistory
                 onSelectOrder={(ord) => setSelectedTokenOrder(ord)}
+              />
+            )}
+            {currentTab === 'reviews' && (
+              <ReviewsPage
+                onBrowseMenu={() => setCurrentTab('menu')}
+                onViewTokens={() => setCurrentTab('orders')}
               />
             )}
           </>

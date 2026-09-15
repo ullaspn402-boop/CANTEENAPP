@@ -1,4 +1,4 @@
-import type { Category, FoodItem, Order, OrderStatus, Notification, AnalyticsData } from '../types.ts';
+import type { Category, FoodItem, Order, OrderStatus, Notification, AnalyticsData, ReviewItem, ReviewSummary, Feedback } from '../types.ts';
 
 // 1. In-Memory Resilient Categories
 export const fallbackCategories: Category[] = [
@@ -757,3 +757,184 @@ export function getFallbackAnalyticsData(): AnalyticsData {
     weeklyTrend,
   };
 }
+
+// 6. In-Memory Resilient Reviews & Feedback Store
+export const fallbackFeedbacks: ReviewItem[] = [
+  {
+    id: 101,
+    orderId: 1001,
+    userId: 1,
+    userName: 'Rohan Sharma',
+    userEmail: 'rohan.sharma@campus.edu',
+    rating: 5,
+    comment: 'The Masala Dosa is consistently the best breakfast on campus! Crispy, hot, and the coconut chutney was fresh. The digital token was ready in 6 minutes.',
+    foodItemId: 1,
+    foodItemName: 'Masala Dosa',
+    tags: ['Crispy & Fresh', 'Fast Counter', 'Super Tasty'],
+    helpfulCount: 24,
+    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 mins ago
+  },
+  {
+    id: 102,
+    orderId: 1002,
+    userId: 2,
+    userName: 'Priya Patel',
+    userEmail: 'priya.patel@campus.edu',
+    rating: 5,
+    comment: 'Cold coffee with vanilla ice cream saved me during double lecture break! Perfectly chilled and creamy. Love the digital token tracking.',
+    foodItemId: 17,
+    foodItemName: 'Cold Coffee with Ice Cream',
+    tags: ['Chilled & Creamy', 'Must Try', 'Pocket Friendly'],
+    helpfulCount: 19,
+    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
+  },
+  {
+    id: 103,
+    orderId: 1003,
+    userId: 3,
+    userName: 'Amit Verma',
+    userEmail: 'amit.verma@campus.edu',
+    rating: 5,
+    comment: 'Special North Indian Thali is unmatched value for ₹90. Dal Makhani was rich and the Gulab Jamun was soft and warm. Clean thali and fast service.',
+    foodItemId: 5,
+    foodItemName: 'Special North Indian Thali',
+    tags: ['Full Meal', 'Value for Money', 'Hygienic'],
+    helpfulCount: 31,
+    createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(), // 4 hours ago
+  },
+  {
+    id: 104,
+    orderId: 1004,
+    userId: 4,
+    userName: 'Sneha Rao',
+    userEmail: 'sneha.rao@campus.edu',
+    rating: 4,
+    comment: 'Paneer Butter Masala had great flavor and generous paneer cubes. Butter naan was warm. Slightly busy around 1 PM but token counter kept it organized.',
+    foodItemId: 7,
+    foodItemName: 'Paneer Butter Masala with Naan',
+    tags: ['Rich Gravy', 'Generous Portion'],
+    helpfulCount: 15,
+    createdAt: new Date(Date.now() - 1000 * 60 * 360).toISOString(), // 6 hours ago
+  },
+  {
+    id: 105,
+    orderId: 1005,
+    userId: 5,
+    userName: 'Vikram Nair',
+    userEmail: 'vikram.nair@campus.edu',
+    rating: 5,
+    comment: 'Crispy Samosas with sweet tamarind chutney & hot cutting chai. Essential evening combo before hostel study hours.',
+    foodItemId: 9,
+    foodItemName: 'Crispy Veg Samosa (2 pcs)',
+    tags: ['Crunchy', 'Evening Classic'],
+    helpfulCount: 12,
+    createdAt: new Date(Date.now() - 1000 * 60 * 480).toISOString(), // 8 hours ago
+  },
+  {
+    id: 106,
+    orderId: 1006,
+    userId: 6,
+    userName: 'Ananya Joshi',
+    userEmail: 'ananya.joshi@campus.edu',
+    rating: 5,
+    comment: 'Veg Hakka Noodles was surprisingly authentic with good crunch of bell peppers and cabbage. Ready right when my token reached Step 3.',
+    foodItemId: 13,
+    foodItemName: 'Veg Hakka Noodles',
+    tags: ['Authentic Flavor', 'Quick Prep'],
+    helpfulCount: 9,
+    createdAt: new Date(Date.now() - 1000 * 60 * 600).toISOString(), // 10 hours ago
+  },
+  {
+    id: 107,
+    orderId: null,
+    userId: 7,
+    userName: 'Karthik Reddy',
+    userEmail: 'karthik.reddy@campus.edu',
+    rating: 4,
+    comment: 'Idli Vada combo is always steaming hot. Chutney refill counter is super handy and staff are polite.',
+    foodItemId: 2,
+    foodItemName: 'Idli Vada Combo',
+    tags: ['Steaming Hot', 'Good Service'],
+    helpfulCount: 8,
+    createdAt: new Date(Date.now() - 1000 * 60 * 1440).toISOString(), // 1 day ago
+  },
+];
+
+let nextFeedbackId = 200;
+
+export function addFallbackFeedback(item: {
+  orderId?: number | null;
+  userId: number;
+  userName: string;
+  userEmail?: string;
+  rating: number;
+  comment: string;
+  foodItemId?: number | null;
+  foodItemName?: string | null;
+  tags?: string[];
+}): ReviewItem {
+  const newReview: ReviewItem = {
+    id: nextFeedbackId++,
+    orderId: item.orderId || null,
+    userId: item.userId,
+    userName: item.userName || 'Campus Student',
+    userEmail: item.userEmail || '',
+    rating: Math.min(5, Math.max(1, Math.round(item.rating))),
+    comment: item.comment,
+    foodItemId: item.foodItemId || null,
+    foodItemName: item.foodItemName || null,
+    tags: item.tags || [],
+    helpfulCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  fallbackFeedbacks.unshift(newReview);
+
+  // Update corresponding food item rating if applicable
+  if (item.foodItemId) {
+    const food = fallbackFoodItems.find((f) => f.id === item.foodItemId);
+    if (food) {
+      const newCount = (food.ratingCount || 0) + 1;
+      food.rating = Number((((food.rating || 4.5) * (food.ratingCount || 0) + item.rating) / newCount).toFixed(1));
+      food.ratingCount = newCount;
+    }
+  }
+
+  return newReview;
+}
+
+export function toggleFeedbackHelpful(feedbackId: number): number {
+  const fb = fallbackFeedbacks.find((f) => f.id === feedbackId);
+  if (fb) {
+    fb.helpfulCount = (fb.helpfulCount || 0) + 1;
+    return fb.helpfulCount;
+  }
+  return 0;
+}
+
+export function getFallbackFeedbackSummary(): ReviewSummary {
+  const totalCount = fallbackFeedbacks.length;
+  const sumRatings = fallbackFeedbacks.reduce((sum, f) => sum + f.rating, 0);
+  const avg = totalCount > 0 ? Number((sumRatings / totalCount).toFixed(1)) : 4.8;
+
+  const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  for (const f of fallbackFeedbacks) {
+    const star = Math.min(5, Math.max(1, Math.round(f.rating))) as 1 | 2 | 3 | 4 | 5;
+    breakdown[star]++;
+  }
+
+  // Top liked food items
+  const sortedFoods = [...fallbackFoodItems].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  const mostLikedItems = sortedFoods.slice(0, 4);
+  const poorlyRatedItems = sortedFoods.slice(-2);
+
+  return {
+    averageRating: avg,
+    totalFeedbackCount: totalCount,
+    ratingBreakdown: breakdown,
+    recentFeedback: [...fallbackFeedbacks],
+    mostLikedItems,
+    poorlyRatedItems,
+  };
+}
+

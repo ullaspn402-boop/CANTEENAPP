@@ -35,6 +35,8 @@ import {
   updateOrderPaymentStatusByStaff,
   submitOrderFeedback,
   getFeedbackSummary,
+  getAllReviewsList,
+  voteReviewHelpful,
   getInventoryStatus,
   updateInventoryStock,
   getUserNotifications,
@@ -541,6 +543,53 @@ app.get('/api/feedback/summary', async (req, res) => {
   }
 });
 
+// ─── Reviews & Ratings System ─────────────────────────────────────────────────
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const ratingParam = req.query.rating ? Number(req.query.rating) : undefined;
+    const summary = await getFeedbackSummary();
+    const reviews = await getAllReviewsList(ratingParam);
+    res.json({
+      summary,
+      reviews,
+    });
+  } catch (error: any) {
+    handleApiError(res, error, 'Unable to load reviews.');
+  }
+});
+
+app.post('/api/reviews', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { rating, comment, foodItemId, orderId, tags } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Bad Request', message: 'Rating must be between 1 and 5 stars.' });
+    }
+    const result = await submitOrderFeedback({
+      orderId: orderId ? Number(orderId) : undefined,
+      userId: req.currentUser!.id,
+      userName: req.currentUser!.name,
+      userEmail: req.currentUser!.email,
+      rating: Number(rating),
+      comment: typeof comment === 'string' ? comment.trim() : '',
+      foodItemId: foodItemId ? Number(foodItemId) : undefined,
+      tags: Array.isArray(tags) ? tags : [],
+    });
+    res.status(201).json(result);
+  } catch (error: any) {
+    handleApiError(res, error, 'Unable to submit review.');
+  }
+});
+
+app.post('/api/reviews/:id/helpful', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const count = await voteReviewHelpful(id);
+    res.json({ helpfulCount: count });
+  } catch (error: any) {
+    res.json({ helpfulCount: 1 });
+  }
+});
+
 // ─── Inventory ────────────────────────────────────────────────────────────────
 app.get('/api/inventory', requireAuth, requireRole(['staff', 'admin']), async (req: AuthRequest, res) => {
   try {
@@ -618,5 +667,9 @@ app.post('/api/ai/assistant', aiRateLimiter, requireAuth, async (req: AuthReques
   }
 });
 
-// Export the Express app as the Vercel serverless handler
+// Export the Express app as the Vercel serverless handler (compatible with both CJS require and ESM import)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = app;
+  (module.exports as any).default = app;
+}
 export default app;

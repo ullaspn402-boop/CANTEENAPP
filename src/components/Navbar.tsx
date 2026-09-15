@@ -33,6 +33,7 @@ import {
   Store,
   Navigation,
   Compass,
+  Star,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -229,6 +230,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                       #{activeOrder.tokenNumber}
                     </span>
                   )}
+                </button>
+                <button
+                  onClick={() => setCurrentTab('reviews')}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    currentTab === 'reviews'
+                      ? 'bg-amber-50 text-amber-700 font-semibold'
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                  }`}
+                >
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                  Canteen Reviews
                 </button>
               </>
             )}

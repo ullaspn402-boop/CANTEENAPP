@@ -21,18 +21,21 @@ import {
   Navigation,
   Compass,
   GraduationCap,
+  Star,
 } from 'lucide-react';
 
 interface StudentHomeProps {
   canteenStatus: CanteenStatus | null;
   onOpenTokenTracker: () => void;
   onOpenAIAssistant?: () => void;
+  onOpenReviews?: () => void;
 }
 
 export const StudentHome: React.FC<StudentHomeProps> = ({
   canteenStatus,
   onOpenTokenTracker,
   onOpenAIAssistant,
+  onOpenReviews,
 }) => {
   const { user } = useAuth();
   const { activeOrder, totalItems, totalAmount, setIsCartOpen } = useCart();
@@ -263,19 +266,28 @@ export const StudentHome: React.FC<StudentHomeProps> = ({
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-2xl p-4 border border-amber-200/80 flex items-center gap-3 sm:col-span-2 lg:col-span-1">
-          <div className="w-12 h-12 rounded-xl bg-amber-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
-            <TrendingUp className="w-6 h-6" />
+        <div
+          onClick={onOpenReviews}
+          className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 border border-amber-200/80 flex items-center justify-between gap-3 sm:col-span-2 lg:col-span-1 cursor-pointer hover:border-amber-400 hover:shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-md group-hover:scale-105 transition-transform">
+              <Star className="w-6 h-6 fill-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-sm">
+                  Reviews & Ratings
+                </span>
+                <span className="text-[10px] text-amber-700 font-bold">★ 4.8</span>
+              </div>
+              <h4 className="text-xs sm:text-sm font-bold text-neutral-900 mt-0.5 group-hover:text-amber-700 transition-colors">
+                Campus Food Reviews
+              </h4>
+              <p className="text-[11px] text-neutral-500">Read 120+ verified student reviews</p>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded-sm">
-              Zero Waiting
-            </span>
-            <h4 className="text-xs sm:text-sm font-bold text-neutral-900 mt-0.5">
-              Samosa & Filter Coffee Express
-            </h4>
-            <p className="text-[11px] text-neutral-500">Ready in under 3 minutes at Counter 1</p>
-          </div>
+          <ArrowRight className="w-4 h-4 text-amber-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
         </div>
       </div>
 

@@ -77,16 +77,49 @@ export interface Order {
 
 export interface Feedback {
   id?: number;
-  orderId: number;
+  orderId?: number;
   userId?: number;
   userName?: string;
   rating: number;
   comment: string | null;
   foodItemId?: number | null;
+  foodItemName?: string | null;
+  tags?: string[];
+  helpfulCount?: number;
   createdAt?: string | Date;
 }
 
 export type FeedbackItem = Feedback;
+
+export interface ReviewItem {
+  id: number;
+  orderId?: number | null;
+  userId: number;
+  userName: string;
+  userEmail?: string;
+  rating: number;
+  comment: string;
+  foodItemId?: number | null;
+  foodItemName?: string | null;
+  tags?: string[];
+  helpfulCount?: number;
+  createdAt: string | Date;
+}
+
+export interface ReviewSummary {
+  averageRating: number;
+  totalFeedbackCount: number;
+  ratingBreakdown: {
+    5: number;
+    4: number;
+    3: number;
+    2: number;
+    1: number;
+  };
+  recentFeedback: ReviewItem[];
+  mostLikedItems: FoodItem[];
+  poorlyRatedItems?: FoodItem[];
+}
 
 export interface InventoryItem {
   id: number;

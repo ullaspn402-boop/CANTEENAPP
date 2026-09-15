@@ -12,7 +12,7 @@ import {
   users,
 } from './schema.ts';
 import { eq, desc, asc, and, sql, inArray } from 'drizzle-orm';
-import type { Category, FoodItem, Order, CanteenStatus, OrderItem, FeedbackItem } from '../types.ts';
+import type { Category, FoodItem, Order, CanteenStatus, OrderItem, FeedbackItem, ReviewItem, ReviewSummary } from '../types.ts';
 import { aiService } from '../services/ai/aiService.ts';
 import {
   getFallbackCategories,
@@ -31,6 +31,10 @@ import {
   getFallbackNotifications,
   markAllFallbackNotificationsRead,
   addFallbackNotification,
+  fallbackFeedbacks,
+  addFallbackFeedback,
+  getFallbackFeedbackSummary,
+  toggleFeedbackHelpful,
 } from './fallbackData.ts';
 
 // In-memory idempotency store to prevent duplicate orders within a 30-second window
@@ -842,47 +846,65 @@ export async function updateOrderPaymentStatusByStaff(
   }
 }
 
-// Feedback
+// Feedback & Reviews System
 export async function submitOrderFeedback(data: {
-  orderId: number;
+  orderId?: number;
   userId: number;
+  userName?: string;
+  userEmail?: string;
   rating: number;
   comment?: string;
   foodItemId?: number;
+  tags?: string[];
 }) {
+  // Always update in-memory resilient fallback so newly submitted reviews appear immediately
+  const fallbackResult = addFallbackFeedback({
+    orderId: data.orderId || null,
+    userId: data.userId,
+    userName: data.userName || 'Campus Student',
+    userEmail: data.userEmail,
+    rating: data.rating,
+    comment: data.comment || '',
+    foodItemId: data.foodItemId || null,
+    tags: data.tags || [],
+  });
+
   try {
-    const [fb] = await db
-      .insert(feedback)
-      .values({
-        orderId: data.orderId,
-        userId: data.userId,
-        rating: data.rating,
-        comment: data.comment || null,
-        foodItemId: data.foodItemId || null,
-      })
-      .returning();
+    if (data.orderId) {
+      const [fb] = await db
+        .insert(feedback)
+        .values({
+          orderId: data.orderId,
+          userId: data.userId,
+          rating: data.rating,
+          comment: data.comment || null,
+          foodItemId: data.foodItemId || null,
+        })
+        .returning();
 
-    if (data.foodItemId) {
-      const item = await db.select().from(foodItems).where(eq(foodItems.id, data.foodItemId)).limit(1);
-      if (item.length > 0) {
-        const cur = item[0];
-        const newCount = cur.ratingCount + 1;
-        const newRating = Number(((cur.rating * cur.ratingCount + data.rating) / newCount).toFixed(1));
-        await db
-          .update(foodItems)
-          .set({ rating: newRating, ratingCount: newCount })
-          .where(eq(foodItems.id, cur.id));
+      if (data.foodItemId) {
+        const item = await db.select().from(foodItems).where(eq(foodItems.id, data.foodItemId)).limit(1);
+        if (item.length > 0) {
+          const cur = item[0];
+          const newCount = cur.ratingCount + 1;
+          const newRating = Number(((cur.rating * cur.ratingCount + data.rating) / newCount).toFixed(1));
+          await db
+            .update(foodItems)
+            .set({ rating: newRating, ratingCount: newCount })
+            .where(eq(foodItems.id, cur.id));
+        }
       }
-    }
 
-    return fb;
+      return { ...fallbackResult, ...fb };
+    }
   } catch (error) {
-    console.error('submitOrderFeedback error:', error);
-    throw new Error('Failed to submit feedback', { cause: error });
+    console.warn('PostgreSQL unavailable for feedback, stored in resilient store:', error);
   }
+
+  return fallbackResult;
 }
 
-export async function getFeedbackSummary() {
+export async function getFeedbackSummary(): Promise<ReviewSummary> {
   try {
     const allFb = await db
       .select({
@@ -896,28 +918,67 @@ export async function getFeedbackSummary() {
       .from(feedback)
       .leftJoin(users, eq(feedback.userId, users.id))
       .orderBy(desc(feedback.createdAt))
-      .limit(30);
+      .limit(50);
 
-    const totalRatings = allFb.length;
-    const avgRating =
-      totalRatings > 0
-        ? Number((allFb.reduce((acc, curr) => acc + curr.rating, 0) / totalRatings).toFixed(1))
-        : 4.8;
+    if (allFb && allFb.length > 0) {
+      const totalRatings = allFb.length;
+      const avgRating = Number((allFb.reduce((acc, curr) => acc + curr.rating, 0) / totalRatings).toFixed(1));
 
-    const topLiked = await db.select().from(foodItems).orderBy(desc(foodItems.rating)).limit(4);
-    const lowRated = await db.select().from(foodItems).orderBy(asc(foodItems.rating)).limit(3);
+      const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      for (const fbItem of allFb) {
+        const star = Math.min(5, Math.max(1, Math.round(fbItem.rating))) as 1 | 2 | 3 | 4 | 5;
+        breakdown[star]++;
+      }
 
-    return {
-      averageRating: avgRating,
-      totalFeedbackCount: totalRatings,
-      recentFeedback: allFb,
-      mostLikedItems: topLiked,
-      poorlyRatedItems: lowRated,
-    };
+      const topLiked = await db.select().from(foodItems).orderBy(desc(foodItems.rating)).limit(4);
+      const lowRated = await db.select().from(foodItems).orderBy(asc(foodItems.rating)).limit(3);
+
+      const formattedReviews: ReviewItem[] = allFb.map((f) => ({
+        id: f.id,
+        orderId: f.orderId,
+        userId: 0,
+        userName: f.userName || 'Student',
+        rating: f.rating,
+        comment: f.comment || '',
+        createdAt: f.createdAt,
+        helpfulCount: 5,
+      }));
+
+      // Merge with fallback items so user-generated and seed reviews are both visible
+      const existingIds = new Set(formattedReviews.map((r) => r.id));
+      for (const fb of fallbackFeedbacks) {
+        if (!existingIds.has(fb.id)) {
+          formattedReviews.push(fb);
+        }
+      }
+
+      return {
+        averageRating: avgRating,
+        totalFeedbackCount: formattedReviews.length,
+        ratingBreakdown: breakdown,
+        recentFeedback: formattedReviews,
+        mostLikedItems: topLiked.length > 0 ? (topLiked as any) : getFallbackFoodItems().slice(0, 4),
+        poorlyRatedItems: lowRated.length > 0 ? (lowRated as any) : [],
+      };
+    }
   } catch (error) {
-    console.error('getFeedbackSummary error:', error);
-    throw new Error('Failed to fetch feedback summary', { cause: error });
+    console.warn('PostgreSQL unavailable for feedback summary, using resilient fallback:', error);
   }
+
+  return getFallbackFeedbackSummary();
+}
+
+export async function getAllReviewsList(filterRating?: number): Promise<ReviewItem[]> {
+  const summary = await getFeedbackSummary();
+  let list = summary.recentFeedback;
+  if (filterRating && filterRating >= 1 && filterRating <= 5) {
+    list = list.filter((r) => Math.round(r.rating) === filterRating);
+  }
+  return list;
+}
+
+export async function voteReviewHelpful(reviewId: number): Promise<number> {
+  return toggleFeedbackHelpful(reviewId);
 }
 
 // Inventory
