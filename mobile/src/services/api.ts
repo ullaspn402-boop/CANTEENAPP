@@ -144,3 +144,36 @@ export async function askAIAssistant(query: string): Promise<{ answer: string; s
     suggestions: ['Check wait time', 'Today Special Combo', 'Track my token'],
   };
 }
+
+export async function fetchStaffOrders(status?: string): Promise<Order[]> {
+  const query = status ? `?status=${status}` : '';
+  const res = await fetch(buildMobileApiUrl(`/api/staff/orders${query}`), {
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    let message = 'Failed to fetch staff orders.';
+    try {
+      const err = await res.json();
+      message = err.message || err.error || message;
+    } catch {}
+    throw new Error(message);
+  }
+  return await res.json();
+}
+
+export async function updateOrderStatus(orderId: number, status: string): Promise<Order> {
+  const res = await fetch(buildMobileApiUrl(`/api/staff/orders/${orderId}/status`), {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    let message = 'Failed to update order status.';
+    try {
+      const err = await res.json();
+      message = err.message || err.error || message;
+    } catch {}
+    throw new Error(message);
+  }
+  return await res.json();
+}

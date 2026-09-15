@@ -16,6 +16,7 @@ import { DigitalTokenScreen } from './src/screens/DigitalTokenScreen';
 import { OrderHistoryScreen } from './src/screens/OrderHistoryScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { FoodDetailModal } from './src/screens/FoodDetailModal';
+import { StaffDashboardScreen } from './src/screens/StaffDashboardScreen';
 import { setMobileAuthSession } from './src/services/api';
 
 interface ErrorBoundaryState {
@@ -117,6 +118,15 @@ function MainApp() {
 
   if (!currentUser) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // Staff and Admin see the Staff Dashboard — not the student menu
+  if (currentUser.role === 'staff' || currentUser.role === 'admin') {
+    return (
+      <MobileErrorBoundary>
+        <StaffDashboardScreen user={currentUser} onLogout={handleLogout} />
+      </MobileErrorBoundary>
+    );
   }
 
   return (
