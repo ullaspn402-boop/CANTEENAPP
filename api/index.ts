@@ -140,6 +140,15 @@ app.use(
 );
 
 app.use(express.json());
+
+// Seamlessly handle paths whether prefixed with /api or stripped by serverless rewrites
+app.use((req, res, next) => {
+  if (!req.url.startsWith('/api/') && req.url !== '/api') {
+    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
+  }
+  next();
+});
+
 app.use('/api/', generalRateLimiter);
 
 // Initialize DB schema & seed on first cold start
