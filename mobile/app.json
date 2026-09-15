@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Smart Canteen",
-    "slug": "smart-canteen",
+    "name": "CampusBite",
+    "slug": "campusbite",
     "scheme": "com.smartcanteen.app",
     "version": "1.0.0",
     "orientation": "portrait",

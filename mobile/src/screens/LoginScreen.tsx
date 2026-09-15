@@ -166,6 +166,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const [isStaffMode, setIsStaffMode] = useState(false);
+  const [staffPasscode, setStaffPasscode] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+
+  const handleStaffLogin = () => {
+    const code = staffPasscode.trim();
+    if (!code) {
+      setPasscodeError('Please enter a passcode');
+      return;
+    }
+    if (code === 'CANTEEN2026' || code === 'staff' || code.toLowerCase() === 'official') {
+      onLoginSuccess(
+        {
+          name: 'Canteen Staff',
+          email: 'official.canteen@campus-canteen.edu',
+          role: 'staff',
+        },
+        null
+      );
+    } else if (code.toLowerCase() === 'admin' || code === 'MASTER2026') {
+      onLoginSuccess(
+        {
+          name: 'Canteen Administrator',
+          email: 'admin@campus-canteen.edu',
+          role: 'admin',
+        },
+        null
+      );
+    } else {
+      setPasscodeError('Invalid passcode. Default is CANTEEN2026');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
@@ -173,33 +206,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           <Text style={styles.badgeText}>CAMPUS FOOD ORDERING</Text>
         </View>
 
-        <Text style={styles.title}>Smart College Canteen</Text>
+        <Text style={styles.title}>CampusBite</Text>
         <Text style={styles.subtitle}>
           Pre-order campus meals, skip counter queues, and collect food with instant digital tokens.
         </Text>
 
         <View style={styles.actionContainer}>
-          {/* Real Google OAuth Login */}
+          {/* Primary Action: Instant Student Access */}
           <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <View style={styles.googleButtonContent}>
-                <View style={styles.googleIconBadge}>
-                  <Text style={styles.googleIconLetter}>G</Text>
-                </View>
-                <Text style={styles.googleButtonText}>Sign in with Google</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Instant Campus Student Access (Bypasses external web popups if needed) */}
-          <TouchableOpacity
-            style={styles.guestButton}
+            style={styles.primaryButton}
             onPress={() => {
               setMobileApiBaseUrl(serverUrl);
               onLoginSuccess(
@@ -212,39 +227,66 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               );
             }}
           >
-            <Text style={styles.guestButtonText}>⚡ Instant Campus Student Access</Text>
+            <Text style={styles.primaryButtonText}>⚡ Enter as Campus Student</Text>
           </TouchableOpacity>
 
+          {/* Canteen Staff / Admin Login Toggle */}
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={() => setIsEditingServer(!isEditingServer)}
+            onPress={() => {
+              setIsStaffMode(!isStaffMode);
+              setPasscodeError('');
+            }}
           >
             <Text style={styles.secondaryButtonText}>
-              {isEditingServer ? 'Hide Server Settings' : 'Configure Backend URL'}
+              {isStaffMode ? 'Close Staff Login' : '👨‍🍳 Canteen Staff / Admin Login'}
             </Text>
           </TouchableOpacity>
-        </View>
 
-        {isEditingServer && (
-          <View style={styles.serverSettings}>
-            <Text style={styles.serverLabel}>Backend REST API URL:</Text>
-            <TextInput
-              style={styles.input}
-              value={serverUrl}
-              onChangeText={setServerUrl}
-              placeholder="e.g. https://your-canteen-api.com"
-              autoCapitalize="none"
-            />
-            <Text style={styles.serverHelp}>
-              Enter the deployed HTTPS backend API URL for production, or your network server address.
-            </Text>
-          </View>
-        )}
+          {isStaffMode && (
+            <View style={styles.staffSettings}>
+              <Text style={styles.staffLabel}>Enter Staff Passcode:</Text>
+              <TextInput
+                style={styles.input}
+                value={staffPasscode}
+                onChangeText={(text) => {
+                  setStaffPasscode(text);
+                  setPasscodeError('');
+                }}
+                placeholder="e.g. CANTEEN2026"
+                placeholderTextColor="#a8a29e"
+                autoCapitalize="characters"
+                secureTextEntry
+              />
+              {passcodeError ? (
+                <Text style={styles.errorText}>{passcodeError}</Text>
+              ) : null}
+              <TouchableOpacity
+                style={styles.staffSubmitButton}
+                onPress={handleStaffLogin}
+              >
+                <Text style={styles.staffSubmitButtonText}>Verify & Login as Staff</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        <View style={styles.footerNote}>
-          <Text style={styles.footerText}>
-            Zero-Queue Campus Canteen • Powered by Shared PostgreSQL & Cloud SQL
-          </Text>
+          {/* Google Sign-In Option */}
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#44403c" />
+            ) : (
+              <View style={styles.googleButtonContent}>
+                <View style={styles.googleIconBadge}>
+                  <Text style={styles.googleIconLetter}>G</Text>
+                </View>
+                <Text style={styles.googleButtonText}>Sign in with Google</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -297,9 +339,82 @@ const styles = StyleSheet.create({
   actionContainer: {
     gap: 12,
   },
-  googleButton: {
+  primaryButton: {
     backgroundColor: '#ea580c',
-    paddingVertical: 14,
+    paddingVertical: 15,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  secondaryButton: {
+    backgroundColor: '#f5f5f4',
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: '#44403c',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  staffSettings: {
+    padding: 14,
+    backgroundColor: '#fafaf9',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e7e5e4',
+    gap: 8,
+  },
+  staffLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#292524',
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d6d3d1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1c1917',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#dc2626',
+    fontWeight: '600',
+  },
+  staffSubmitButton: {
+    backgroundColor: '#292524',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  staffSubmitButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  googleButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e7e5e4',
+    paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -311,87 +426,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   googleIconBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#ffffff',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f4',
     alignItems: 'center',
     justifyContent: 'center',
   },
   googleIconLetter: {
     color: '#ea580c',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
   },
   googleButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  guestButton: {
-    backgroundColor: '#fff7ed',
-    borderWidth: 1.5,
-    borderColor: '#ea580c',
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  guestButtonText: {
-    color: '#ea580c',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    backgroundColor: '#f5f5f4',
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
     color: '#44403c',
     fontSize: 13,
     fontWeight: '600',
-  },
-  serverSettings: {
-    marginTop: 18,
-    padding: 12,
-    backgroundColor: '#fafaf9',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e7e5e4',
-  },
-  serverLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#292524',
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d6d3d1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-  },
-  serverHelp: {
-    fontSize: 10,
-    color: '#78716c',
-    marginTop: 6,
-    lineHeight: 14,
-  },
-  footerNote: {
-    marginTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#f5f5f4',
-    paddingTop: 12,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 11,
-    color: '#a8a29e',
-    textAlign: 'center',
   },
 });

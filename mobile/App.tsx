@@ -38,7 +38,7 @@ class MobileErrorBoundary extends React.Component<{ children: React.ReactNode },
     if (this.state.hasError) {
       return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff7ed', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 22, fontWeight: '900', color: '#ea580c', marginBottom: 8 }}>Smart Canteen</Text>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: '#ea580c', marginBottom: 8 }}>CampusBite</Text>
           <Text style={{ fontSize: 13, color: '#57534e', textAlign: 'center', marginBottom: 20 }}>
             App initialization completed. Tap below to launch your campus canteen menu.
           </Text>
@@ -133,7 +133,7 @@ function MainApp() {
               ? 'CANTEEN STAFF'
               : 'CAMPUS CANTEEN'}
           </Text>
-          <Text style={styles.headerTitle}>Smart Canteen</Text>
+          <Text style={styles.headerTitle}>CampusBite</Text>
         </View>
         <View style={styles.userBadge}>
           <Text style={styles.userBadgeText}>{currentUser.name.split(' ')[0]}</Text>

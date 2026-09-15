@@ -205,10 +205,9 @@ function CanteenAppContent() {
       />
 
       {/* Minimal Footer */}
-      <footer className="border-t border-neutral-200 bg-white py-6 text-center text-xs text-neutral-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Smart College Canteen & Food Ordering Platform • Zero Queue Architecture</span>
-          <span className="text-neutral-400">Powered by Cloud SQL & Firebase Authentication</span>
+      <footer className="border-t border-neutral-200 bg-white py-5 text-center text-xs text-neutral-500">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-center">
+          <span>CampusBite • Smart College Food Ordering Platform</span>
         </div>
       </footer>
     </div>
