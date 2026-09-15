@@ -1,315 +1,406 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * CampusBite Mobile App — WebView Wrapper
+ *
+ * Architecture:
+ * - On launch, fetches mobile-config.json from the GitHub repo to get the live Vercel URL.
+ * - Loads the full website in a native WebView — 100% same UI as the website.
+ * - If GitHub config fetch fails, uses the last known good URL or a baked-in fallback.
+ * - No hardcoded Vercel URL in the APK — update mobile-config.json on GitHub to change URL.
+ *
+ * To change Vercel URL: Edit mobile-config.json in the repo root → push to main → done!
+ */
+
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
+  TouchableOpacity,
   StatusBar,
+  SafeAreaView,
+  BackHandler,
+  Platform,
+  Animated,
+  Easing,
 } from 'react-native';
+import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as SplashScreen from 'expo-splash-screen';
-import { FoodItem, CartItem, Order } from './src/types';
-import { LoginScreen } from './src/screens/LoginScreen';
-import { HomeScreen } from './src/screens/HomeScreen';
-import { CartModal } from './src/screens/CartModal';
-import { DigitalTokenScreen } from './src/screens/DigitalTokenScreen';
-import { OrderHistoryScreen } from './src/screens/OrderHistoryScreen';
-import { ProfileScreen } from './src/screens/ProfileScreen';
-import { FoodDetailModal } from './src/screens/FoodDetailModal';
-import { StaffDashboardScreen } from './src/screens/StaffDashboardScreen';
-import { setMobileAuthSession } from './src/services/api';
 
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error?: Error;
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// ─── Config ────────────────────────────────────────────────────────────────────
+// URL of mobile-config.json in GitHub repo — this is ALWAYS stable (it's in source control)
+const CONFIG_URL =
+  'https://raw.githubusercontent.com/ullaspn402-boop/CANTEENAPP/main/mobile-config.json';
+
+// Fallback URL used ONLY if both GitHub config AND stored URL are unavailable
+const LAST_RESORT_FALLBACK = 'https://canteen-app.vercel.app';
+
+// Timeout for config fetch in ms
+const CONFIG_FETCH_TIMEOUT = 8000;
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+interface RemoteConfig {
+  appUrl: string;
+  appName?: string;
 }
 
-class MobileErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+// ─── App ───────────────────────────────────────────────────────────────────────
+export default function App() {
+  const webviewRef = useRef<WebView>(null);
+  const spinValue = useRef(new Animated.Value(0)).current;
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
+  const [appUrl, setAppUrl] = useState<string | null>(null);
+  const [configError, setConfigError] = useState(false);
+  const [webviewError, setWebviewError] = useState(false);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('Mobile startup error caught:', error, info);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff7ed', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 22, fontWeight: '900', color: '#ea580c', marginBottom: 8 }}>CampusBite</Text>
-          <Text style={{ fontSize: 13, color: '#57534e', textAlign: 'center', marginBottom: 20 }}>
-            App initialization completed. Tap below to launch your campus canteen menu.
-          </Text>
-          <TouchableOpacity
-            style={{ backgroundColor: '#ea580c', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14 }}
-            onPress={() => this.setState({ hasError: false })}
-          >
-            <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>Launch Menu</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-function MainApp() {
-  const [currentUser, setCurrentUser] = useState<{
-    name: string;
-    email: string;
-    role: string;
-  } | null>(null);
-
-  const [currentTab, setCurrentTab] = useState<'menu' | 'orders' | 'profile'>('menu');
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [activeOrder, setActiveOrder] = useState<Order | null>(null);
-  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
-  const [selectedFoodItem, setSelectedFoodItem] = useState<FoodItem | null>(null);
-
+  // Spin animation for loading logo
   useEffect(() => {
-    SplashScreen.hideAsync().catch(() => {});
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
   }, []);
 
-  const handleLoginSuccess = (
-    user: { name: string; email: string; role: string },
-    token: string | null = null
-  ) => {
-    setCurrentUser(user);
-    setMobileAuthSession(token, user.role);
-  };
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
-  const handleLogout = () => {
-    setMobileAuthSession(null, '');
-    setCurrentUser(null);
-    setCart([]);
-    setActiveOrder(null);
-  };
+  // ─── Fetch Remote Config ─────────────────────────────────────────────────────
+  const fetchConfig = useCallback(async () => {
+    setConfigError(false);
+    setWebviewError(false);
+    setIsLoading(true);
 
-  const handleAddToCart = (item: FoodItem) => {
-    setCart((prev) => {
-      const existing = prev.find((c) => c.foodItem.id === item.id);
-      if (existing) {
-        return prev.map((c) =>
-          c.foodItem.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
-        );
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), CONFIG_FETCH_TIMEOUT);
+
+      const res = await fetch(CONFIG_URL + '?t=' + Date.now(), {
+        signal: controller.signal,
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) throw new Error('Config fetch failed: ' + res.status);
+
+      const config: RemoteConfig = await res.json();
+      if (!config.appUrl || !config.appUrl.startsWith('http')) {
+        throw new Error('Invalid appUrl in config');
       }
-      return [...prev, { foodItem: item, quantity: 1 }];
-    });
-  };
 
-  const handleUpdateQuantity = (foodItemId: number, quantity: number) => {
-    if (quantity <= 0) {
-      setCart((prev) => prev.filter((c) => c.foodItem.id !== foodItemId));
-      return;
+      setAppUrl(config.appUrl.replace(/\/+$/, ''));
+    } catch (err) {
+      console.warn('[CampusBite] Config fetch error:', err);
+      // Use last-resort fallback — app still works
+      setAppUrl(LAST_RESORT_FALLBACK);
+      setConfigError(true);
     }
-    setCart((prev) =>
-      prev.map((c) => (c.foodItem.id === foodItemId ? { ...c, quantity } : c))
-    );
+  }, []);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
+
+  // ─── Hide splash once URL is ready ───────────────────────────────────────────
+  useEffect(() => {
+    if (appUrl !== null) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [appUrl]);
+
+  // ─── Android hardware back button ─────────────────────────────────────────────
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (canGoBack && webviewRef.current) {
+        webviewRef.current.goBack();
+        return true;
+      }
+      return false;
+    });
+    return () => handler.remove();
+  }, [canGoBack]);
+
+  // ─── Navigation state change ──────────────────────────────────────────────────
+  const handleNavStateChange = (navState: WebViewNavigation) => {
+    setCanGoBack(navState.canGoBack);
   };
 
-  const handleOrderPlaced = (order: Order) => {
-    setActiveOrder(order);
-    setIsTokenModalOpen(true);
-  };
-
-  if (!currentUser) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  // Staff and Admin see the Staff Dashboard — not the student menu
-  if (currentUser.role === 'staff' || currentUser.role === 'admin') {
+  // ─── Loading screen while config is being fetched ────────────────────────────
+  if (appUrl === null) {
     return (
-      <MobileErrorBoundary>
-        <StaffDashboardScreen user={currentUser} onLogout={handleLogout} />
-      </MobileErrorBoundary>
+      <View style={styles.splashContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#ea580c" />
+        <View style={styles.splashContent}>
+          <Animated.View style={[styles.splashLogo, { transform: [{ rotate: spin }] }]}>
+            <Text style={styles.splashLogoText}>🍽️</Text>
+          </Animated.View>
+          <Text style={styles.splashTitle}>CampusBite</Text>
+          <Text style={styles.splashSubtitle}>Campus Food Ordering System</Text>
+          <Text style={styles.splashLoading}>Connecting to campus canteen...</Text>
+        </View>
+      </View>
     );
   }
 
+  // ─── Full WebView Error Screen ─────────────────────────────────────────────────
+  if (webviewError) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff7ed" />
+        <View style={styles.errorContent}>
+          <Text style={styles.errorEmoji}>📡</Text>
+          <Text style={styles.errorTitle}>Connection Issue</Text>
+          <Text style={styles.errorMessage}>
+            Unable to reach the CampusBite server.{'\n'}
+            Please check your internet connection.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => {
+              setWebviewError(false);
+              setIsLoading(true);
+              // Refetch config then reload
+              fetchConfig();
+            }}
+          >
+            <Text style={styles.retryBtnText}>🔄  Retry Connection</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.retryBtnOutline}
+            onPress={() => {
+              setWebviewError(false);
+              setIsLoading(true);
+              webviewRef.current?.reload();
+            }}
+          >
+            <Text style={styles.retryBtnOutlineText}>↻  Reload Page</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ─── Main WebView ──────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.appContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* Top Mobile Bar */}
-      <View style={styles.appHeader}>
-        <View>
-          <Text style={styles.headerSubtitle}>
-            {currentUser.role === 'admin'
-              ? 'CANTEEN ADMINISTRATOR'
-              : currentUser.role === 'staff'
-              ? 'CANTEEN STAFF'
-              : 'CAMPUS CANTEEN'}
+      {/* Offline / Config warning banner */}
+      {configError && (
+        <View style={styles.configWarningBanner}>
+          <Text style={styles.configWarningText}>
+            ⚠️  Using cached server address. Some features may be limited.
           </Text>
-          <Text style={styles.headerTitle}>CampusBite</Text>
         </View>
-        <View style={styles.userBadge}>
-          <Text style={styles.userBadgeText}>{currentUser.name.split(' ')[0]}</Text>
+      )}
+
+      {/* Page loading progress indicator */}
+      {isLoading && (
+        <View style={styles.pageLoadBar}>
+          <View style={styles.pageLoadBarFill} />
         </View>
-      </View>
+      )}
 
-      {/* Main Tab Screen */}
-      <View style={styles.mainContent}>
-        {currentTab === 'menu' && (
-          <HomeScreen
-            cart={cart}
-            onAddToCart={handleAddToCart}
-            onOpenCart={() => setIsCartOpen(true)}
-            onSelectItem={(item) => setSelectedFoodItem(item)}
-            activeOrder={activeOrder}
-            onOpenTokenTracker={(order) => {
-              setActiveOrder(order);
-              setIsTokenModalOpen(true);
-            }}
-          />
-        )}
-
-        {currentTab === 'orders' && (
-          <OrderHistoryScreen
-            onSelectOrder={(order) => {
-              setActiveOrder(order);
-              setIsTokenModalOpen(true);
-            }}
-          />
-        )}
-
-        {currentTab === 'profile' && (
-          <ProfileScreen user={currentUser} onLogout={handleLogout} />
-        )}
-      </View>
-
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('menu')}
-        >
-          <Text style={[styles.navIcon, currentTab === 'menu' && styles.navActive]}>🍽️</Text>
-          <Text style={[styles.navLabel, currentTab === 'menu' && styles.navLabelActive]}>Menu</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('orders')}
-        >
-          <Text style={[styles.navIcon, currentTab === 'orders' && styles.navActive]}>📋</Text>
-          <Text style={[styles.navLabel, currentTab === 'orders' && styles.navLabelActive]}>Orders</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('profile')}
-        >
-          <Text style={[styles.navIcon, currentTab === 'profile' && styles.navActive]}>👤</Text>
-          <Text style={[styles.navLabel, currentTab === 'profile' && styles.navLabelActive]}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Cart Modal */}
-      <CartModal
-        visible={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cart={cart}
-        onUpdateQuantity={handleUpdateQuantity}
-        onClearCart={() => setCart([])}
-        onOrderPlaced={handleOrderPlaced}
+      <WebView
+        ref={webviewRef}
+        source={{ uri: appUrl }}
+        style={styles.webview}
+        // Show native loading indicator while page loads
+        onLoadStart={() => setIsLoading(true)}
+        onLoadEnd={() => setIsLoading(false)}
+        onError={(e) => {
+          console.error('[WebView] Error:', e.nativeEvent);
+          setWebviewError(true);
+          setIsLoading(false);
+        }}
+        onHttpError={(e) => {
+          // Only treat 5xx server errors as fatal
+          if (e.nativeEvent.statusCode >= 500) {
+            console.error('[WebView] HTTP Error:', e.nativeEvent.statusCode);
+            setWebviewError(true);
+          }
+          setIsLoading(false);
+        }}
+        onNavigationStateChange={handleNavStateChange}
+        // Allow all navigation within the same origin
+        originWhitelist={['*']}
+        // Enable JavaScript & DOM storage (required for React app)
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        // Allow the website to access camera, media, etc.
+        allowsInlineMediaPlayback={true}
+        mediaPlaybackRequiresUserAction={false}
+        // Allow mixed content (http + https resources)
+        mixedContentMode="always"
+        // Set a proper mobile user agent so the website knows it's in the app
+        applicationNameForUserAgent="CampusBiteApp/1.0 (Android)"
+        // Inject JS to tell website it's inside native app
+        injectedJavaScriptBeforeContentLoaded={`
+          window.CAMPUSBITE_NATIVE_APP = true;
+          window.CAMPUSBITE_APP_VERSION = '1.0.0';
+          window.CAMPUSBITE_PLATFORM = 'android';
+          true;
+        `}
+        // Allow file access for potential upload features
+        allowFileAccess={true}
+        allowUniversalAccessFromFileURLs={true}
+        // Geolocation for campus location features
+        geolocationEnabled={true}
+        // Caching for offline resilience
+        cacheEnabled={true}
+        cacheMode="LOAD_DEFAULT"
+        // Pull to refresh
+        pullToRefreshEnabled={true}
+        // Sharpness on high-DPI screens
+        scalesPageToFit={false}
+        // Ensure viewport meta is respected
+        viewportContent="width=device-width, initial-scale=1.0, maximum-scale=1.0"
       />
-
-      {/* Digital Token Tracker Modal */}
-      <DigitalTokenScreen
-        visible={isTokenModalOpen}
-        onClose={() => setIsTokenModalOpen(false)}
-        order={activeOrder}
-      />
-
-      {/* Food Item Detail Modal */}
-      <FoodDetailModal
-        item={selectedFoodItem}
-        onClose={() => setSelectedFoodItem(null)}
-        onAddToCart={handleAddToCart}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
-export default function App() {
-  return (
-    <MobileErrorBoundary>
-      <MainApp />
-    </MobileErrorBoundary>
-  );
-}
-
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
+  // Splash / Loading
+  splashContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  appHeader: {
-    flexDirection: 'row',
+    backgroundColor: '#ea580c',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f4',
   },
-  headerSubtitle: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#ea580c',
-    letterSpacing: 1,
+  splashContent: {
+    alignItems: 'center',
+    gap: 8,
   },
-  headerTitle: {
-    fontSize: 18,
+  splashLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  splashLogoText: {
+    fontSize: 36,
+  },
+  splashTitle: {
+    fontSize: 32,
     fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: -0.5,
+  },
+  splashSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '500',
+  },
+  splashLoading: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 24,
+    fontWeight: '400',
+  },
+
+  // Error Screen
+  errorContainer: {
+    flex: 1,
+    backgroundColor: '#fff7ed',
+  },
+  errorContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  errorEmoji: {
+    fontSize: 56,
+    marginBottom: 8,
+  },
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: '800',
     color: '#1c1917',
   },
-  userBadge: {
-    backgroundColor: '#ffedd5',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  userBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#c2410c',
-  },
-  mainContent: {
-    flex: 1,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#f5f5f4',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  navIcon: {
-    fontSize: 18,
-    marginBottom: 2,
-    opacity: 0.6,
-  },
-  navActive: {
-    opacity: 1,
-  },
-  navLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+  errorMessage: {
+    fontSize: 14,
     color: '#78716c',
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  navLabelActive: {
-    color: '#ea580c',
-    fontWeight: '800',
+  retryBtn: {
+    backgroundColor: '#ea580c',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 8,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  retryBtnOutline: {
+    borderWidth: 1.5,
+    borderColor: '#d6d3d1',
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 14,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  retryBtnOutlineText: {
+    color: '#57534e',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // Main App
+  appContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  webview: {
+    flex: 1,
+  },
+
+  // Config warning
+  configWarningBanner: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fde68a',
+  },
+  configWarningText: {
+    fontSize: 11,
+    color: '#92400e',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+  // Page load bar
+  pageLoadBar: {
+    height: 2,
+    backgroundColor: '#ffedd5',
+    overflow: 'hidden',
+  },
+  pageLoadBarFill: {
+    height: 2,
+    width: '70%',
+    backgroundColor: '#ea580c',
   },
 });

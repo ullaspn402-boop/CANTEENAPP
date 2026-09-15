@@ -42,10 +42,6 @@ jobs:
           yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools" || true
 
-      - name: Install Mobile Dependencies
-        run: |
-          cd mobile
-          npm install
 
       - name: Prebuild Android Project
         env:
@@ -53,6 +49,17 @@ jobs:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           cd mobile
+          npm install
+
+          # Write mobile-config.json with the live Vercel URL from GitHub secret
+          CANTEEN_URL="${{ secrets.CANTEEN_API_URL }}"
+          if [ -n "$CANTEEN_URL" ]; then
+            echo "{\"appUrl\":\"$CANTEEN_URL\",\"appName\":\"CampusBite\",\"version\":\"1.0.0\"}" > ../mobile-config.json
+            echo "✅ Wrote mobile-config.json with URL: $CANTEEN_URL"
+          else
+            echo "⚠️  CANTEEN_API_URL secret not set — using existing mobile-config.json"
+          fi
+
           echo "EXPO_PUBLIC_API_BASE_URL=${{ secrets.CANTEEN_API_URL }}" > .env
           npx expo prebuild --platform android --clean
 

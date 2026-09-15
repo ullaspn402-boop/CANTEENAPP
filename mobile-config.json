@@ -1,0 +1,6 @@
+{
+  "appUrl": "https://canteen-app.vercel.app",
+  "appName": "CampusBite",
+  "version": "1.0.0",
+  "_instructions": "Update appUrl to your current Vercel deployment URL. Push to git. No APK rebuild needed."
+}
