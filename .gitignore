@@ -7,3 +7,7 @@ coverage/
 .env*
 !.env.example
 scratch/
+# Compiled API bundles (conflict with api/index.ts on Vercel)
+api/index.mjs
+api/index.js
+api/index.cjs
