@@ -283,6 +283,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             {role === 'admin' && (
               <>
                 <button
+                  onClick={() => setCurrentTab('queue')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    currentTab === 'queue'
+                      ? 'bg-amber-50 text-amber-700 font-semibold'
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                  }`}
+                >
+                  <ChefHat className="w-4 h-4 text-orange-600" />
+                  Orders & Kitchen
+                </button>
+                <button
                   onClick={() => setCurrentTab('analytics')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
                     currentTab === 'analytics'

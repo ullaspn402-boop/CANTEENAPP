@@ -3,6 +3,7 @@ import { Order, OrderStatus } from '../../types.ts';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { buildApiUrl } from '../../lib/apiClient.ts';
 import { OrderCompletedSummaryModal } from '../common/OrderCompletedSummaryModal.tsx';
+import { OrderPlacedSummaryModal } from '../student/OrderPlacedSummaryModal.tsx';
 import { TransferOfficialAccountModal } from '../common/TransferOfficialAccountModal.tsx';
 import {
   ChefHat,
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react';
 
 export const StaffDashboard: React.FC = () => {
-  const { authHeaders } = useAuth();
+  const { authHeaders, role } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('active');
@@ -34,6 +35,7 @@ export const StaffDashboard: React.FC = () => {
   const [updatingPaymentId, setUpdatingPaymentId] = useState<number | null>(null);
   const [selectedDetailsOrder, setSelectedDetailsOrder] = useState<Order | null>(null);
   const [completedSummaryOrder, setCompletedSummaryOrder] = useState<Order | null>(null);
+  const [placedSummaryOrder, setPlacedSummaryOrder] = useState<Order | null>(null);
   const [newOrderAlert, setNewOrderAlert] = useState<Order | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -488,9 +490,19 @@ export const StaffDashboard: React.FC = () => {
                   )}
 
                   {order.status === 'completed' && (
-                    <div className="text-center text-xs font-semibold text-neutral-400 py-1 flex items-center justify-center gap-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>Completed & Collected</span>
+                    <div className="space-y-2">
+                      <div className="text-center text-xs font-semibold text-emerald-700 py-0.5 flex items-center justify-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Completed & Collected</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCompletedSummaryOrder(order)}
+                        className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>View Fulfillment Receipt</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -668,10 +680,36 @@ export const StaffDashboard: React.FC = () => {
                     updateOrderStatus(selectedDetailsOrder.id, 'completed');
                     setSelectedDetailsOrder(null);
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Handover Food & Complete</span>
+                </button>
+              )}
+
+              {selectedDetailsOrder.status === 'completed' && (
+                <button
+                  onClick={() => {
+                    setCompletedSummaryOrder(selectedDetailsOrder);
+                    setSelectedDetailsOrder(null);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>View Completed Receipt Summary</span>
+                </button>
+              )}
+
+              {selectedDetailsOrder.status !== 'completed' && (
+                <button
+                  onClick={() => {
+                    setPlacedSummaryOrder(selectedDetailsOrder);
+                    setSelectedDetailsOrder(null);
+                  }}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4 text-neutral-600" />
+                  <span>View Order Ticket Summary</span>
                 </button>
               )}
             </div>
@@ -679,11 +717,19 @@ export const StaffDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Staff Order Completed & Fulfilled Summary Modal */}
+      {/* Staff / Admin Order Placed Summary Ticket Modal */}
+      <OrderPlacedSummaryModal
+        isOpen={Boolean(placedSummaryOrder)}
+        order={placedSummaryOrder}
+        viewerRole={role === 'admin' ? 'admin' : 'staff'}
+        onClose={() => setPlacedSummaryOrder(null)}
+      />
+
+      {/* Staff / Admin Order Completed & Fulfilled Summary Modal */}
       <OrderCompletedSummaryModal
         isOpen={Boolean(completedSummaryOrder)}
         order={completedSummaryOrder}
-        viewerRole="staff"
+        viewerRole={role === 'admin' ? 'admin' : 'staff'}
         onClose={() => setCompletedSummaryOrder(null)}
       />
 

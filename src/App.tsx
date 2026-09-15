@@ -118,6 +118,8 @@ function CanteenAppContent() {
             {currentTab === 'orders' && (
               <OrderHistory
                 onSelectOrder={(ord) => setSelectedTokenOrder(ord)}
+                onViewPlacedSummary={(ord) => setOrderPlacedSummary(ord)}
+                onViewCompletedSummary={(ord) => setOrderCompletedSummary(ord)}
               />
             )}
             {currentTab === 'reviews' && (
@@ -142,6 +144,7 @@ function CanteenAppContent() {
         {/* ADMIN VIEWS */}
         {isAuthenticated && role === 'admin' && (
           <>
+            {currentTab === 'queue' && <StaffDashboard />}
             {currentTab === 'analytics' && (
               <AnalyticsDashboard
                 canteenStatus={canteenStatus}
