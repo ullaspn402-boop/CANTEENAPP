@@ -75682,8 +75682,8 @@ __export(index_exports, {
   default: () => index_default
 });
 module.exports = __toCommonJS(index_exports);
-var import_express = __toESM(require_express2(), 1);
-var import_cors = __toESM(require_lib4(), 1);
+var import_express = __toESM(require_express2());
+var import_cors = __toESM(require_lib4());
 
 // node_modules/helmet/index.mjs
 var dashify = (str) => str.replace(/[A-Z]/g, (capitalLetter) => "-" + capitalLetter.toLowerCase());
@@ -76253,7 +76253,7 @@ var helmet = Object.assign(
 );
 
 // api/index.ts
-var import_node_process2 = __toESM(require("node:process"), 1);
+var import_node_process2 = __toESM(require("node:process"));
 
 // node_modules/firebase-admin/lib/esm/app/index.js
 var import_app = __toESM(require_app(), 1);
