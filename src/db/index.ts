@@ -12,9 +12,13 @@ export const createPool = () => {
   if (!global._postgresPool) {
     let config: any;
 
-    if (process.env.DATABASE_URL) {
+    const connectionString =
+      process.env.DATABASE_URL ||
+      'postgresql://neondb_owner:npg_wpDJCHYOuo04@ep-bitter-violet-aeddim6n-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require';
+
+    if (connectionString) {
       config = {
-        connectionString: process.env.DATABASE_URL,
+        connectionString,
         ssl: {
           rejectUnauthorized: false,
         },
