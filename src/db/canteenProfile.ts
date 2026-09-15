@@ -37,8 +37,26 @@ let officialProfile: OfficialCanteenProfile = {
 };
 
 export const getOfficialPasscode = (): string => {
-  // Use import.meta.env for Vite/browser compatibility (process.env is Node.js only)
-  return import.meta.env.VITE_CANTEEN_MASTER_PASSCODE || import.meta.env.VITE_OFFICIAL_PASSCODE || 'CANTEEN2026';
+  // Check process.env first (Node.js server environment on Render / Cloud)
+  if (typeof process !== 'undefined' && process?.env) {
+    const val =
+      process.env.VITE_CANTEEN_MASTER_PASSCODE ||
+      process.env.VITE_OFFICIAL_PASSCODE ||
+      process.env.CANTEEN_MASTER_PASSCODE ||
+      process.env.OFFICIAL_PASSCODE;
+    if (val) return val;
+  }
+  // Check import.meta.env safely (Vite browser frontend environment)
+  try {
+    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any)?.env : undefined;
+    if (metaEnv) {
+      const val = metaEnv.VITE_CANTEEN_MASTER_PASSCODE || metaEnv.VITE_OFFICIAL_PASSCODE;
+      if (val) return val;
+    }
+  } catch {
+    // Ignore in CommonJS or non-ESM environments
+  }
+  return 'CANTEEN2026';
 };
 
 export const OFFICIAL_PASSCODE = getOfficialPasscode();

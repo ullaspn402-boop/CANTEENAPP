@@ -25,7 +25,7 @@ class AIService {
     const { result } = await aiCircuitBreaker.executeWithRetry<IntelligenceData>(
       async () => {
         // If Gemini is configured and circuit is not open, we can try it, or default to LocalML
-        if ((typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GEMINI_API_KEY : null) || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null)) {
+        if (typeof process !== 'undefined' && (process.env?.VITE_GEMINI_API_KEY || process.env?.GEMINI_API_KEY)) {
           try {
             return await this.geminiProvider.getDemandIntelligence();
           } catch (e) {
@@ -58,7 +58,7 @@ class AIService {
   async askStudentAssistant(query: string, context?: { userName?: string }): Promise<AssistantAnswer> {
     const { result } = await aiCircuitBreaker.executeWithRetry<AssistantAnswer>(
       async () => {
-        if ((typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GEMINI_API_KEY : null) || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null)) {
+        if (typeof process !== 'undefined' && (process.env?.VITE_GEMINI_API_KEY || process.env?.GEMINI_API_KEY)) {
           return await this.geminiProvider.askAssistant(query, context);
         }
         return await this.localMLProvider.askAssistant(query, context);
@@ -80,7 +80,7 @@ class AIService {
    */
   getTelemetry(): AITelemetry {
     const cbMetrics = aiCircuitBreaker.getMetrics();
-    const hasApiKey = Boolean((typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GEMINI_API_KEY : null) || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null));
+    const hasApiKey = Boolean(typeof process !== 'undefined' && (process.env?.VITE_GEMINI_API_KEY || process.env?.GEMINI_API_KEY));
 
     let activeProvider = 'LocalMLProvider (Cloud SQL)';
     if (hasApiKey && cbMetrics.circuitState === 'CLOSED') {

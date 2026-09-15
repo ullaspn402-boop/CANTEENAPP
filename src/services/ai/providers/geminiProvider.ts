@@ -3,10 +3,8 @@ import { IntelligenceData } from '../../../types.ts';
 import { GoogleGenAI } from '@google/genai';
 
 let geminiClient: GoogleGenAI | null = null;
-
 function getGeminiClient(): GoogleGenAI | null {
-  // Use import.meta.env for Vite/browser compatibility
-  const apiKey = (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GEMINI_API_KEY : null) || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null);
+  const apiKey = typeof process !== 'undefined' ? (process.env?.VITE_GEMINI_API_KEY || process.env?.GEMINI_API_KEY) : null;
   if (!apiKey) return null;
   if (!geminiClient) {
     try {
@@ -26,7 +24,7 @@ export class GeminiProvider implements AIProvider {
   name = 'Google Gemini (GenAI)';
 
   async isAvailable(): Promise<boolean> {
-    const key = (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GEMINI_API_KEY : null) || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null);
+    const key = typeof process !== 'undefined' ? (process.env?.VITE_GEMINI_API_KEY || process.env?.GEMINI_API_KEY) : null;
     return Boolean(key);
   }
 
